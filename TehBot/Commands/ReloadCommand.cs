@@ -21,7 +21,6 @@ namespace TehPers.Discord.TehBot.Commands {
 
         public override async Task Execute(SocketMessage msg, string[] args) {
             Bot.Instance.Load();
-            Command.ReloadCommands();
             await msg.Channel.SendMessageAsync($"{msg.Author.Mention} Reloaded successfully");
         }
 

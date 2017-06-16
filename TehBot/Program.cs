@@ -9,12 +9,10 @@ using TehPers.Discord.TehBot.Commands;
 
 namespace TehPers.Discord.TehBot {
     public class Program {
-        public static void Main(string[] args) => new Program().MainAsync().GetAwaiter().GetResult();
+        public static void Main(string[] args) => Task.WaitAll(new Program().MainAsync());
 
         public async Task MainAsync() {
             Bot bot = new Bot();
-            const string token = "MzE1NzEzMDc2NDA0MTU4NDY1.DAK0cg.-jYJFHH6iqhO_4lg3sjwNEVKNgg";
-            await bot.LoginAsync(token);
             await bot.StartAsync();
 
             // Enter the console loop

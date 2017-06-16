@@ -177,15 +177,23 @@
     <Compile Include="Commands\ForgetCommand.cs" />
     <Compile Include="Commands\ReloadCommand.cs" />
     <Compile Include="Commands\RememberCommand.cs" />
+    <Compile Include="Commands\PermissionsCommand.cs" />
     <Compile Include="Commands\StatsCommand.cs" />
     <Compile Include="Commands\HelpCommand.cs" />
     <Compile Include="Config.cs" />
+    <Compile Include="Permissions\PermissionConfig.cs" />
+    <Compile Include="Permissions\PermissionHandler.cs" />
+    <Compile Include="Permissions\Role.cs" />
+    <Compile Include="Permissions\SavingCollection.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ConcurrentSet.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

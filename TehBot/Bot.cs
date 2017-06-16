@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting.Channels;
 using System.Text;
 using System.Threading.Tasks;
 using Discord;
@@ -10,6 +11,7 @@ using Discord.WebSocket;
 using Newtonsoft.Json;
 using NLua;
 using TehPers.Discord.TehBot.Commands;
+using TehPers.Discord.TehBot.Permissions;
 
 namespace TehPers.Discord.TehBot {
     public class Bot : IDisposable {
@@ -20,15 +22,41 @@ namespace TehPers.Discord.TehBot {
 
         public Config Config { get; set; }
 
+        public PermissionHandler Permissions { get; } = new PermissionHandler();
+
         public Bot() {
             if (Bot.Instance != null)
                 return;
             Bot.Instance = this;
-
+            
             Client = new DiscordSocketClient();
             Client.Log += LogAsync;
             Client.MessageReceived += MessageReceivedAsync;
             Client.Ready += ReadyAsync;
+
+            AfterLoaded += async (sender, e) => {
+                List<Task> tasks = new List<Task>();
+
+                Command.ReloadCommands();
+
+                if (Config.Strings.TryGetValue("bot.username", out string name) && Client.CurrentUser.Username != name)
+                    tasks.Add(Client.CurrentUser.ModifyAsync(properties => properties.Username = name));
+
+                if (Config.Strings.TryGetValue("bot.game", out string game) && Client.CurrentUser.Game?.Name != game) {
+                    string format = string.Format(game, Command.Prefix);
+                    tasks.Add(Client.SetGameAsync(format));
+                }
+
+                if (Config.Strings.TryGetValue("bot.avatar", out string picture)) {
+                    string path = Path.Combine(Directory.GetCurrentDirectory(), picture);
+
+                    if (File.Exists(path)) {
+                        tasks.Add(Client.CurrentUser.ModifyAsync(settings => settings.Avatar = new Image(path)));
+                    }
+                }
+
+                await Task.WhenAll(tasks);
+            };
 
             // Set up interpreter
             // ReSharper disable once InconsistentNaming
@@ -46,8 +74,14 @@ namespace TehPers.Discord.TehBot {
             }
         }
 
-        public async Task LoginAsync(string token) => await Client.LoginAsync(TokenType.Bot, token);
-        public async Task StartAsync() => await Client.StartAsync();
+        public async Task StartAsync() {
+            LoadOnly();
+
+            string token = Config.Strings.GetOrAdd("bot.token", "");
+            await Client.LoginAsync(TokenType.Bot, token);
+
+            await Client.StartAsync();
+        }
 
         public void Save() {
             if (!Directory.Exists(Directory.GetCurrentDirectory()))
@@ -56,9 +90,11 @@ namespace TehPers.Discord.TehBot {
             string path = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
             Log(new LogMessage(LogSeverity.Verbose, "BOT", "Saving config"));
             File.WriteAllText(path, JsonConvert.SerializeObject(Config, Formatting.Indented));
+
+            OnAfterSaved();
         }
 
-        public void Load() {
+        private void LoadOnly() {
             string path = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
             if (File.Exists(path)) {
                 Log(new LogMessage(LogSeverity.Verbose, "BOT", "Loading config"));
@@ -70,13 +106,18 @@ namespace TehPers.Discord.TehBot {
             }
         }
 
-        #region Events
+        public void Load() {
+            LoadOnly();
+            Permissions.Load();
+            OnAfterLoaded();
+        }
+
+        #region Handlers
         public async Task MessageReceivedAsync(SocketMessage msg) {
             if (msg.Author == Bot.Instance.Client.CurrentUser)
                 return;
 
             if (msg.Content.StartsWith(Command.Prefix)) {
-                Log(new LogMessage(LogSeverity.Verbose, $"#{msg.Channel.Name}", msg.Content));
                 await CommandHandlerAsync(msg);
             }
         }
@@ -92,8 +133,6 @@ namespace TehPers.Discord.TehBot {
 
         private Task ReadyAsync() {
             Load();
-            Command.ReloadCommands();
-
             return Task.CompletedTask;
         }
         #endregion
@@ -104,7 +143,9 @@ namespace TehPers.Discord.TehBot {
 
             // Parse arguments
             string[] args = Bot.ParseArgs(string.Join(" ", components.Skip(1))).ToArray();
-            if (Command.CommandList.TryGetValue(cmd, out Command command)) {
+            if (Command.CommandList.TryGetValue(cmd, out Command command) && Permissions.HasPermission(msg.Author, command.ConfigNamespace)) {
+                Log(new LogMessage(LogSeverity.Verbose, "LOG", $"[#{msg.Channel.Name}] {msg.Author.Discriminator}: {msg.Content}"));
+
                 if (command.Validate(msg, args))
                     await command.Execute(msg, args);
                 else {
@@ -162,5 +203,13 @@ namespace TehPers.Discord.TehBot {
             Client?.Dispose();
             Interpreter?.Dispose();
         }
+
+        #region Events
+        public event EventHandler AfterLoaded;
+        protected virtual void OnAfterLoaded() => AfterLoaded?.Invoke(this, EventArgs.Empty);
+
+        public event EventHandler AfterSaved;
+        protected virtual void OnAfterSaved() => AfterSaved?.Invoke(this, EventArgs.Empty);
+        #endregion
     }
 }

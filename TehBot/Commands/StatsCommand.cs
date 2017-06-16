@@ -72,17 +72,27 @@ namespace TehPers.Discord.TehBot.Commands {
                         }
                     }
 
-                    if (Stats.TryAdd("coldsteel", new ConcurrentDictionary<string, string>())) {
-                        Stats["coldsteel"]["**Name**"] = "**Coldsteel the Hedgehog**";
-                        Stats["coldsteel"]["**Speed**"] = "Faster than sound";
-                        Stats["coldsteel"]["**Strength**"] = "Stronger than Sonic";
-                        Stats["coldsteel"]["**Usefulness**"] = "None";
-                        Stats["coldsteel"]["**Catchphrase**"] = "*Nothing personnel, kid.*";
-                        Stats["coldsteel"]["Image"] = "http://i0.kym-cdn.com/photos/images/newsfeed/000/613/323/e2e.jpg";
-                    }
+                    AddEasterEggs();
                 }
 
                 return true;
+            }
+        }
+
+        private void AddEasterEggs() {
+            if (Stats.TryAdd("coldsteel", new ConcurrentDictionary<string, string>())) {
+                Stats["coldsteel"]["**Name**"] = "**Coldsteel the Hedgehog**";
+                Stats["coldsteel"]["**Speed**"] = "Faster than sound";
+                Stats["coldsteel"]["**Strength**"] = "Stronger than Sonic";
+                Stats["coldsteel"]["**Usefulness**"] = "None";
+                Stats["coldsteel"]["**Catchphrase**"] = "*Nothing personnel, kid.*";
+                Stats["coldsteel"]["Image"] = "http://i0.kym-cdn.com/photos/images/newsfeed/000/613/323/e2e.jpg";
+            }
+
+            if (Stats.TryAdd("saturtaco", new ConcurrentDictionary<string, string>())) {
+                Stats["saturtaco"]["**Name**"] = "**Saturtaco**";
+                Stats["saturtaco"]["**Catchphrase**"] = "*Order for four soft tacos, please.*";
+                Stats["saturtaco"]["Image"] = "https://cdn.discordapp.com/attachments/291122372722032652/325140338849218580/image.jpg";
             }
         }
 
@@ -99,7 +109,11 @@ namespace TehPers.Discord.TehBot.Commands {
                 return;
             }
 
-            IEnumerable<string> matches = Stats.Keys.Where(k => k == query);
+            await ShowStats(msg, query);
+        }
+
+        public async Task ShowStats(SocketMessage msg, string query) {
+            IEnumerable<string> matches = Stats.Keys.Where(k => string.Equals(k, query, StringComparison.OrdinalIgnoreCase));
 
             // If no matches, try to find the keys containing the string
             if (!matches.Any())
@@ -118,12 +132,12 @@ namespace TehPers.Discord.TehBot.Commands {
                         Task.WaitAny(
                             Task.Delay(2000),
                             msg.Channel.SendFileAsync(response.GetResponseStream(), filename, $"{msg.Author.Mention} Stats for '{chosen}'\n" + string.Join("\n",
-                                                                                                    from kv in Stats[chosen]
-                                                                                                    where !string.IsNullOrEmpty(kv.Value)
-                                                                                                          && kv.Key != "Image"
-                                                                                                    orderby statNamesList.IndexOf(kv.Key)
-                                                                                                    select $"{kv.Key}: {kv.Value}"))
-                                                                                                    );
+                                                                                                  from kv in Stats[chosen]
+                                                                                                  where !string.IsNullOrEmpty(kv.Value)
+                                                                                                        && kv.Key != "Image"
+                                                                                                  orderby statNamesList.IndexOf(kv.Key)
+                                                                                                  select $"{kv.Key}: {kv.Value}"))
+                        );
                     } catch (Exception) {
                         await msg.Channel.SendMessageAsync($"Failed to find image.\n{msg.Author.Mention} Stats for '{chosen}'\n" + string.Join("\n",
                                                                from kv in Stats[chosen]
