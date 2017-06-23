@@ -45,29 +45,61 @@ namespace TehPers.Discord.TehBot.Commands {
 
             string role = args[1].ToLower();
             string arg = args.Length >= 2 ? args[2].ToLower() : null;
-            
+
             // Get their effective roles
             HashSet<string> effectiveRoles = new HashSet<string>(perms.GetEffectiveRoles(user));
 
-            if (action == "add") {
-                // Make sure that role doesn't already exist
-                if (Bot.Instance.Permissions.Roles.Any(r => r.Name == role))
-                    return false;
+            switch (action) {
+                case "add":
+                    // Make sure that role doesn't already exist, parent (if specified) exists, and the user has above the given role
+                    if (arg != null && perms.Roles.All(r => r.Name != arg))
+                        return false;
+                    return perms.Roles.All(r => r.Name != role) && effectiveRoles.Except(perms.GetRoles(user)).Contains(arg);
+                case "remove":
+                case "assign":
+                case "unassign":
+                    // Make sure that role exists and the user has above the given role
+                    return perms.Roles.Any(r => r.Name == role) && effectiveRoles.Except(perms.GetRoles(user)).Contains(role);
+                case "entrust":
+                case "revoke":
+                    // Make sure that the permission name is given
+                    if (arg == null)
+                        return false;
 
-                // Make sure the user has the given role
-                return effectiveRoles.Contains("admin") || effectiveRoles.Contains(role);
-            } else if (action == "remove") {
-                // Make sure that role doesn't already exist
-                if (Bot.Instance.Permissions.Roles.Any(r => r.Name == role))
+                    // Make sure that role exists and the user has above the given role
+                    return perms.Roles.Any(r => r.Name == role) && effectiveRoles.Except(perms.GetRoles(user)).Contains(role);
+                default:
                     return false;
-
-                // Make sure the user has above the given role
-                return effectiveRoles.Contains("admin") || effectiveRoles.Except(perms.GetRoles(user)).Contains(role);
             }
         }
 
         public override async Task Execute(SocketMessage msg, string[] args) {
-            return;
+            PermissionHandler perms = Bot.Instance.Permissions;
+            string action = args[0].ToLower();
+            string role = args.Length >= 1 ? args[1].ToLower() : null;
+            string arg = args.Length >= 2 ? args[2].ToLower() : null;
+
+            switch (action) {
+                case "add":
+                    Role newRole = new Role(role);
+                    if (arg != null)
+                        newRole.Parent = arg;
+                    perms.AddRole(newRole);
+                    break;
+                case "remove":
+                    perms.RemoveRole(role);
+                    break;
+                case "assign":
+                    break;
+                case "unassign":
+                    break;
+                case "entrust":
+                    break;
+                case "revoke":
+                    break;
+                default:
+                    return;
+            }
         }
 
         public override CommandDocs Documentation { get; }

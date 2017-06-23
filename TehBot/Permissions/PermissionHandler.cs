@@ -23,6 +23,9 @@ namespace TehPers.Discord.TehBot.Permissions {
                 role.Name = role.Name.ToLower();
                 return role;
             });
+
+            Roles.Modified += (sender, e) => Save();
+
             Bot.Instance.AfterLoaded += AfterLoaded;
         }
 
@@ -81,14 +84,36 @@ namespace TehPers.Discord.TehBot.Permissions {
         public void GiveRole(IUser user, string role) {
             if (user == null)
                 throw new ArgumentNullException(nameof(user), "Cannot be null");
-            if (role == null)
-                throw new ArgumentNullException(nameof(role), "Cannot be null");
+            role = role?.ToLower() ?? throw new ArgumentNullException(nameof(role), "Cannot be null");
 
-            Config.Users.GetOrAdd(user.Discriminator, new ConcurrentSet<string>()).Add(role);
+            ConcurrentSet<string> uRoles = Config.Users.GetOrAdd(user.Discriminator, new ConcurrentSet<string>());
+
+            // Make sure this role isn't a child to another role this user has
+            if (uRoles.Any(r => GetWithChildren(r).Any(r2 => r2.Name == role)))
+                return;
+
+            // Remove all children roles
+            foreach (Role child in GetWithChildren(GetRole(role)))
+                uRoles.Remove(child.Name);
+
+            // Add the new role
+            uRoles.Add(role);
+
+            // Save
             Save();
         }
 
         public void AddRole(Role role) => Roles.Add(role);
+
+        public void RemoveRole(string name) => RemoveRole(GetRole(name));
+
+        public void RemoveRole(Role role) {
+            // Update children
+            foreach (Role child in Roles.ToList().Where(r => r.Parent == role.Name))
+                child.Parent = role.Parent;
+
+            Roles.Remove(role);
+        }
 
         public IEnumerable<string> GetRoles(IUser user) => GetRoles(user.Discriminator);
 
@@ -108,7 +133,7 @@ namespace TehPers.Discord.TehBot.Permissions {
             // Check the cache
             if (_effectiveRolesCache.TryGetValue(user, out ConcurrentSet<string> effectiveRoles))
                 return effectiveRoles;
-            
+
             // Find all effective roles
             effectiveRoles = new ConcurrentSet<string>();
             foreach (string roleName in uRoles) {
@@ -117,7 +142,7 @@ namespace TehPers.Discord.TehBot.Permissions {
                     continue;
 
                 effectiveRoles.Add(roleName);
-                foreach (Role child in GetChildren(role))
+                foreach (Role child in GetWithChildren(role))
                     effectiveRoles.Add(child.Name);
             }
 
@@ -125,9 +150,11 @@ namespace TehPers.Discord.TehBot.Permissions {
             return effectiveRoles;
         }
 
-        private IEnumerable<Role> GetChildren(Role role) {
+        private IEnumerable<Role> GetWithChildren(Role role) => GetWithChildren(role.Name);
+
+        private IEnumerable<Role> GetWithChildren(string role) {
             Queue<string> search = new Queue<string>();
-            search.Enqueue(role.Name);
+            search.Enqueue(role);
             HashSet<string> children = new HashSet<string>();
 
             while (search.Any()) {
