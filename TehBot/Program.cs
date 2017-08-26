@@ -9,16 +9,16 @@ using TehPers.Discord.TehBot.Commands;
 
 namespace TehPers.Discord.TehBot {
     public class Program {
-        public static void Main(string[] args) => Task.WaitAll(new Program().MainAsync());
+        public static void Main(string[] args) => new Program().MainAsync().Wait();
 
         public async Task MainAsync() {
             Bot bot = new Bot();
-            await bot.StartAsync();
-
-            // Enter the console loop
-            await ConsoleHandler();
+            if (await bot.StartAsync())
+                await ConsoleHandler();
+            else
+                Console.Read();
         }
-        
+
         public Task ConsoleHandler() {
             while (Program.Running) {
                 string input = Console.ReadLine();

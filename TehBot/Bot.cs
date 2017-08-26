@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using NLua;
 using TehPers.Discord.TehBot.Commands;
 using TehPers.Discord.TehBot.Permissions;
+using static TehPers.Discord.TehBot.Config;
 
 namespace TehPers.Discord.TehBot {
     public class Bot : IDisposable {
@@ -86,13 +87,20 @@ namespace TehPers.Discord.TehBot {
             }
         }
 
-        public async Task StartAsync() {
+        public async Task<bool> StartAsync() {
             LoadOnly();
 
-            string token = Config.Strings.GetOrAdd("bot.token", "");
+            string token = Config.Secrets?.Token;
+            if (string.IsNullOrEmpty(token)) {
+                Log($"Invalid Discord token: {token ?? "(null)"}", LogSeverity.Critical);
+                return false;
+            }
+
             await Client.LoginAsync(TokenType.Bot, token);
 
             await Client.StartAsync();
+
+            return true;
         }
 
         public void Save() {
@@ -107,12 +115,25 @@ namespace TehPers.Discord.TehBot {
         }
 
         private void LoadOnly() {
-            string path = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
-            if (File.Exists(path)) {
-                Log(new LogMessage(LogSeverity.Verbose, "BOT", "Loading config"));
-                Config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(path));
+            Log(new LogMessage(LogSeverity.Verbose, "BOT", "Loading config"));
+
+            string config = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
+            string secrets = Path.Combine(Directory.GetCurrentDirectory(), "Secret");
+
+            if (File.Exists(config)) {
+                Config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(config));
             } else {
                 Log(new LogMessage(LogSeverity.Verbose, "BOT", "Config not found, creating new config"));
+                Config = new Config();
+                Save();
+            }
+
+            config = Path.Combine(secrets, "bot.json");
+            if (File.Exists(config)) {
+                Config.Secrets = JsonConvert.DeserializeObject<SecretConfigs>(File.ReadAllText(config));
+            } else {
+                Directory.CreateDirectory(secrets);
+                Log(new LogMessage(LogSeverity.Verbose, "BOT", "Secret config not found, creating new config"));
                 Config = new Config();
                 Save();
             }
