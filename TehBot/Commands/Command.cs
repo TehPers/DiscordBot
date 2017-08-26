@@ -53,6 +53,7 @@ namespace TehPers.Discord.TehBot.Commands {
             Command.AddCommand(new RememberCommand("r"));
             Command.AddCommand(new ForgetCommand("f"));
             Command.AddCommand(new ReloadCommand("reload"));
+            Command.AddCommand(new PermissionsCommand("roles"));
 
             // Save any changes to the config
             Bot.Instance.Save();

@@ -181,6 +181,7 @@
     <Compile Include="Commands\StatsCommand.cs" />
     <Compile Include="Commands\HelpCommand.cs" />
     <Compile Include="Config.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="Permissions\PermissionConfig.cs" />
     <Compile Include="Permissions\PermissionHandler.cs" />
     <Compile Include="Permissions\Role.cs" />

@@ -16,19 +16,21 @@ using TehPers.Discord.TehBot.Permissions;
 namespace TehPers.Discord.TehBot {
     public class Bot : IDisposable {
 
-        public static Bot Instance;
+        public static Bot Instance { get; private set; }
 
         public DiscordSocketClient Client { get; }
 
         public Config Config { get; set; }
 
-        public PermissionHandler Permissions { get; } = new PermissionHandler();
+        public PermissionHandler Permissions { get; }
 
         public Bot() {
             if (Bot.Instance != null)
                 return;
             Bot.Instance = this;
-            
+
+            Permissions = new PermissionHandler();
+
             Client = new DiscordSocketClient();
             Client.Log += LogAsync;
             Client.MessageReceived += MessageReceivedAsync;
@@ -39,19 +41,29 @@ namespace TehPers.Discord.TehBot {
 
                 Command.ReloadCommands();
 
-                if (Config.Strings.TryGetValue("bot.username", out string name) && Client.CurrentUser.Username != name)
+                if (Config.Strings.TryGetValue("bot.username", out string name) && Client.CurrentUser.Username != name) {
+                    Log(new LogMessage(LogSeverity.Verbose, "LOG", $"Setting username to {name}"));
                     tasks.Add(Client.CurrentUser.ModifyAsync(properties => properties.Username = name));
+                }
 
                 if (Config.Strings.TryGetValue("bot.game", out string game) && Client.CurrentUser.Game?.Name != game) {
+                    Log(new LogMessage(LogSeverity.Verbose, "LOG", $"Setting game to {game}"));
                     string format = string.Format(game, Command.Prefix);
                     tasks.Add(Client.SetGameAsync(format));
                 }
 
                 if (Config.Strings.TryGetValue("bot.avatar", out string picture)) {
+                    Log(new LogMessage(LogSeverity.Verbose, "LOG", $"Setting avatar to {picture}"));
                     string path = Path.Combine(Directory.GetCurrentDirectory(), picture);
 
                     if (File.Exists(path)) {
-                        tasks.Add(Client.CurrentUser.ModifyAsync(settings => settings.Avatar = new Image(path)));
+                        // Just get this one over with
+                        try {
+                            await Client.CurrentUser.ModifyAsync(settings => settings.Avatar = new Image(path));
+                            File.Move(path, $"{path}.loaded");
+                        } catch (IOException) {
+                            Log(new LogMessage(LogSeverity.Verbose, "LOG", $"Failed to set avatar"));
+                        }
                     }
                 }
 
@@ -122,11 +134,13 @@ namespace TehPers.Discord.TehBot {
             }
         }
 
+        public Task LogAsync(string message, LogSeverity severity = LogSeverity.Info, string source = "BOT", Exception exception = null) => LogAsync(new LogMessage(severity, source, message, exception));
         public Task LogAsync(LogMessage msg) {
             Log(msg);
             return Task.CompletedTask;
         }
 
+        public void Log(string message, LogSeverity severity = LogSeverity.Info, string source = "BOT", Exception exception = null) => Log(new LogMessage(severity, source, message, exception));
         public void Log(LogMessage msg) {
             Console.WriteLine(msg.ToString());
         }

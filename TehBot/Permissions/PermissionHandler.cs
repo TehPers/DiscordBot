@@ -16,16 +16,9 @@ namespace TehPers.Discord.TehBot.Permissions {
 
         private readonly ConcurrentDictionary<string, ConcurrentSet<string>> _effectiveRolesCache = new ConcurrentDictionary<string, ConcurrentSet<string>>();
 
-        public SavingCollection<Role> Roles { get; }
+        public SavingCollection<Role> Roles { get; private set; }
 
         public PermissionHandler() {
-            Roles = new SavingCollection<Role>(Config.Roles, Save, role => {
-                role.Name = role.Name.ToLower();
-                return role;
-            });
-
-            Roles.Modified += (sender, e) => Save();
-
             Bot.Instance.AfterLoaded += AfterLoaded;
         }
 
@@ -43,6 +36,13 @@ namespace TehPers.Discord.TehBot.Permissions {
                 Config = new PermissionConfig();
                 Save();
             }
+
+            Roles = new SavingCollection<Role>(Config.Roles, Save, role => {
+                role.Name = role.Name.ToLower();
+                return role;
+            });
+
+            Roles.Modified += (sender, e) => Save();
 
             _effectiveRolesCache.Clear();
         }
@@ -65,7 +65,7 @@ namespace TehPers.Discord.TehBot.Permissions {
             if (!Config.Users.TryGetValue(discriminator, out ConcurrentSet<string> uRoles))
                 return false;
 
-            return uRoles.Contains("admin") || pRoles.Intersect(GetEffectiveRoles(user.Discriminator)).Any();
+            return IsAdmin(user) || pRoles.Intersect(GetEffectiveRoles(user.Discriminator)).Any();
         }
 
         public bool GivePermission(string role, string permission) => GivePermission(Config.Roles.FirstOrDefault(r => r.Name == role), permission);
@@ -75,6 +75,17 @@ namespace TehPers.Discord.TehBot.Permissions {
                 return false;
 
             Config.Permissions.GetOrAdd(permission, new ConcurrentSet<string>()).Add(role.Name);
+            Save();
+            return true;
+        }
+
+        public bool RemovePermission(string role, string permission) => RemovePermission(Config.Roles.FirstOrDefault(r => r.Name == role), permission);
+
+        public bool RemovePermission(Role role, string permission) {
+            if (!Config.Permissions.TryGetValue(permission, out ConcurrentSet<string> pRoles))
+                return false;
+
+            pRoles.Remove(role.Name);
             Save();
             return true;
         }
@@ -99,21 +110,59 @@ namespace TehPers.Discord.TehBot.Permissions {
             // Add the new role
             uRoles.Add(role);
 
+            // Reset the user's cache
+            _effectiveRolesCache.TryRemove(user.Discriminator, out ConcurrentSet<string> _);
+
             // Save
             Save();
         }
 
+        public bool TakeRole(IUser user, string role) {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user), "Cannot be null");
+            role = role?.ToLower() ?? throw new ArgumentNullException(nameof(role), "Cannot be null");
+
+            // Get the user's roles, and return if they have none
+            if (!Config.Users.TryGetValue(user.Discriminator, out ConcurrentSet<string> uRoles))
+                return false;
+
+            // Remove the role
+            bool removed = uRoles.Remove(role);
+
+            // Reset the user's cache
+            _effectiveRolesCache.TryRemove(user.Discriminator, out ConcurrentSet<string> _);
+
+            // Save
+            Save();
+
+            return removed;
+        }
+
         public void AddRole(Role role) => Roles.Add(role);
 
-        public void RemoveRole(string name) => RemoveRole(GetRole(name));
+        public bool RemoveRole(string name) => RemoveRole(GetRole(name));
 
-        public void RemoveRole(Role role) {
+        public bool RemoveRole(Role role) {
             // Update children
             foreach (Role child in Roles.ToList().Where(r => r.Parent == role.Name))
                 child.Parent = role.Parent;
 
-            Roles.Remove(role);
+            // Remove role from users
+            foreach (KeyValuePair<string, ConcurrentSet<string>> userKV in Config.Users)
+                userKV.Value.Remove(role.Name);
+
+            // Remove permissions from role
+            foreach (KeyValuePair<string, ConcurrentSet<string>> permissionKV in Config.Permissions) {
+                permissionKV.Value.Remove(role.Name);
+            }
+
+            // Remove role
+            return Roles.Remove(role);
         }
+
+        public bool IsAdmin(IUser user) => IsAdmin(user.Discriminator);
+
+        public bool IsAdmin(string user) => Config.Users.TryGetValue(user, out ConcurrentSet<string> uRoles) && uRoles.Contains("*");
 
         public IEnumerable<string> GetRoles(IUser user) => GetRoles(user.Discriminator);
 
@@ -127,7 +176,7 @@ namespace TehPers.Discord.TehBot.Permissions {
                 return Enumerable.Empty<string>();
 
             // If user is an admin, they have every role
-            if (uRoles.Contains("admin"))
+            if (IsAdmin(user))
                 return Config.Roles.Select(role => role.Name).ToArray();
 
             // Check the cache
