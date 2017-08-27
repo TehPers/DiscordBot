@@ -23,12 +23,12 @@ namespace TehPers.Discord.TehBot.Commands {
 
         public abstract Task Execute(SocketMessage msg, string[] args);
 
-        public async Task DisplayUsage(ISocketMessageChannel channel) {
+        public virtual async Task DisplayUsage(ISocketMessageChannel channel) {
             StringBuilder usage = new StringBuilder();
             usage.AppendLine($"**Usage**: {Command.Prefix}{Name} {string.Join(" ", Documentation.Arguments.Select(ArgSelector))}");
             usage.AppendLine($"**Description**: *{Documentation.Description}*");
             foreach (CommandDocs.Argument arg in Documentation.Arguments.OrderBy(arg => arg.Optional)) {
-                usage.AppendLine($"**{arg.Name}** : {arg.Description}");
+                usage.AppendLine($"**{arg.Name}**: {arg.Description}");
             }
 
             await channel.SendMessageAsync(usage.ToString());
@@ -48,7 +48,7 @@ namespace TehPers.Discord.TehBot.Commands {
 
             // Load new commands
             Command.AddCommand(new HelpCommand("help"));
-            Command.AddCommand(new StatsCommand("stats"));
+            Command.AddCommand(new StatsCommand("info"));
             Command.AddCommand(new ConfigCommand("config"));
             Command.AddCommand(new RememberCommand("r"));
             Command.AddCommand(new ForgetCommand("f"));
