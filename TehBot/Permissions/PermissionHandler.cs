@@ -1,223 +1,202 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
+using System.Data.Entity;
+using System.Data.Entity.Infrastructure;
+using System.Data.SQLite;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
+using System.Threading.Tasks;
 using Discord;
-using Microsoft.VisualBasic.CompilerServices;
-using Newtonsoft.Json;
+using Discord.WebSocket;
+using TehPers.Discord.TehBot.Commands;
+using TehPers.Discord.TehBot.Permissions.Tables;
 
 namespace TehPers.Discord.TehBot.Permissions {
 
     public class PermissionHandler {
 
-        private PermissionConfig Config { get; set; }
+        public BotDatabase Database => Bot.Instance.Database;
 
-        private readonly ConcurrentDictionary<string, ConcurrentSet<string>> _effectiveRolesCache = new ConcurrentDictionary<string, ConcurrentSet<string>>();
+        public IQueryable<Role> Roles => this.Database.Roles;
 
-        public SavingCollection<Role> Roles { get; private set; }
+        public IQueryable<Permission> Permissions => this.Database.Permissions;
 
-        public PermissionHandler() {
-            Bot.Instance.AfterLoaded += AfterLoaded;
-        }
+        public IQueryable<Role> GlobalRoles => from a in this.Database.RoleAssignments
+                                               join r in this.Database.Roles on a.RoleID equals r.ID
+                                               where a.UserID == null
+                                               select r;
 
-        private void AfterLoaded(object sender, EventArgs e) {
-            Load();
-        }
+        public Task<Role> GetRoleAsync(long? guild, string roleName) => (from r in this.Database.Roles
+                                                                         where (r.GuildID == guild || r.GuildID == null) && r.Name == roleName
+                                                                         orderby r.GuildID descending
+                                                                         select r).FirstOrDefaultAsync();
 
-        public void Load() {
-            string path = Path.Combine(Directory.GetCurrentDirectory(), "permissions.json");
-            if (File.Exists(path)) {
-                Bot.Instance.Log(new LogMessage(LogSeverity.Verbose, "BOT", "Loading permissions"));
-                Config = JsonConvert.DeserializeObject<PermissionConfig>(File.ReadAllText(path));
-            } else {
-                Bot.Instance.Log(new LogMessage(LogSeverity.Verbose, "BOT", "Permissions config not found, creating new permissions config"));
-                Config = new PermissionConfig();
-                Save();
-            }
+        public IQueryable<Role> GetRoles(long? guild, long? user) => from r in this.Database.Roles
+                                                                     join a in this.Database.RoleAssignments on r.ID equals a.RoleID
+                                                                     where (guild == null || r.GuildID == null || r.GuildID == guild) && (a.UserID == null || a.UserID == user)
+                                                                     select r;
 
-            Roles = new SavingCollection<Role>(Config.Roles, Save, role => {
-                role.Name = role.Name.ToLower();
-                return role;
-            });
+        public Task<IEnumerable<Role>> GetEffectiveRolesAsync(long? guild, long? user) => this.GetEffectiveRolesAsync(this.GetRoles(guild, user));
 
-            Roles.Modified += (sender, e) => Save();
+        public async Task<IEnumerable<Role>> GetEffectiveRolesAsync(IEnumerable<Role> roles) {
+            Queue<Role> adding = new Queue<Role>(roles);
+            HashSet<Role> effectiveRoles = new HashSet<Role>();
 
-            _effectiveRolesCache.Clear();
-        }
-
-        private void Save() {
-            if (!Directory.Exists(Directory.GetCurrentDirectory()))
-                return;
-
-            string path = Path.Combine(Directory.GetCurrentDirectory(), "permissions.json");
-            Bot.Instance.Log(new LogMessage(LogSeverity.Verbose, "BOT", "Saving permissions"));
-            File.WriteAllText(path, JsonConvert.SerializeObject(Config, Formatting.Indented));
-        }
-
-        public bool HasPermission(IUser user, string permission) {
-            string discriminator = user.Discriminator;
-
-            if (!Config.Permissions.TryGetValue(permission, out ConcurrentSet<string> pRoles))
-                return true;
-
-            if (!Config.Users.TryGetValue(discriminator, out ConcurrentSet<string> uRoles))
-                return false;
-
-            return IsAdmin(user) || pRoles.Intersect(GetEffectiveRoles(user.Discriminator)).Any();
-        }
-
-        public bool GivePermission(string role, string permission) => GivePermission(Config.Roles.FirstOrDefault(r => r.Name == role), permission);
-
-        public bool GivePermission(Role role, string permission) {
-            if (role == null)
-                return false;
-
-            Config.Permissions.GetOrAdd(permission, new ConcurrentSet<string>()).Add(role.Name);
-            Save();
-            return true;
-        }
-
-        public bool RemovePermission(string role, string permission) => RemovePermission(Config.Roles.FirstOrDefault(r => r.Name == role), permission);
-
-        public bool RemovePermission(Role role, string permission) {
-            if (!Config.Permissions.TryGetValue(permission, out ConcurrentSet<string> pRoles))
-                return false;
-
-            pRoles.Remove(role.Name);
-            Save();
-            return true;
-        }
-
-        public Role GetRole(string name) => Config.Roles.FirstOrDefault(role => role.Name == name);
-
-        public void GiveRole(IUser user, string role) {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user), "Cannot be null");
-            role = role?.ToLower() ?? throw new ArgumentNullException(nameof(role), "Cannot be null");
-
-            ConcurrentSet<string> uRoles = Config.Users.GetOrAdd(user.Discriminator, new ConcurrentSet<string>());
-
-            // Make sure this role isn't a child to another role this user has
-            if (uRoles.Any(r => GetWithChildren(r).Any(r2 => r2.Name == role)))
-                return;
-
-            // Remove all children roles
-            foreach (Role child in GetWithChildren(GetRole(role)))
-                uRoles.Remove(child.Name);
-
-            // Add the new role
-            uRoles.Add(role);
-
-            // Reset the user's cache
-            _effectiveRolesCache.TryRemove(user.Discriminator, out ConcurrentSet<string> _);
-
-            // Save
-            Save();
-        }
-
-        public bool TakeRole(IUser user, string role) {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user), "Cannot be null");
-            role = role?.ToLower() ?? throw new ArgumentNullException(nameof(role), "Cannot be null");
-
-            // Get the user's roles, and return if they have none
-            if (!Config.Users.TryGetValue(user.Discriminator, out ConcurrentSet<string> uRoles))
-                return false;
-
-            // Remove the role
-            bool removed = uRoles.Remove(role);
-
-            // Reset the user's cache
-            _effectiveRolesCache.TryRemove(user.Discriminator, out ConcurrentSet<string> _);
-
-            // Save
-            Save();
-
-            return removed;
-        }
-
-        public void AddRole(Role role) => Roles.Add(role);
-
-        public bool RemoveRole(string name) => RemoveRole(GetRole(name));
-
-        public bool RemoveRole(Role role) {
-            // Update children
-            foreach (Role child in Roles.ToList().Where(r => r.Parent == role.Name))
-                child.Parent = role.Parent;
-
-            // Remove role from users
-            foreach (KeyValuePair<string, ConcurrentSet<string>> userKV in Config.Users)
-                userKV.Value.Remove(role.Name);
-
-            // Remove permissions from role
-            foreach (KeyValuePair<string, ConcurrentSet<string>> permissionKV in Config.Permissions) {
-                permissionKV.Value.Remove(role.Name);
-            }
-
-            // Remove role
-            return Roles.Remove(role);
-        }
-
-        public bool IsAdmin(IUser user) => IsAdmin(user.Discriminator);
-
-        public bool IsAdmin(string user) => Config.Users.TryGetValue(user, out ConcurrentSet<string> uRoles) && uRoles.Contains("*");
-
-        public IEnumerable<string> GetRoles(IUser user) => GetRoles(user.Discriminator);
-
-        public IEnumerable<string> GetRoles(string user) => Config.Users.TryGetValue(user, out ConcurrentSet<string> uRoles) ? uRoles.ToList() : Enumerable.Empty<string>();
-
-        public IEnumerable<string> GetEffectiveRoles(IUser user) => GetEffectiveRoles(user.Discriminator);
-
-        private IEnumerable<string> GetEffectiveRoles(string user) {
-            // Make sure user exists
-            if (!Config.Users.TryGetValue(user, out ConcurrentSet<string> uRoles))
-                return Enumerable.Empty<string>();
-
-            // If user is an admin, they have every role
-            if (IsAdmin(user))
-                return Config.Roles.Select(role => role.Name).ToArray();
-
-            // Check the cache
-            if (_effectiveRolesCache.TryGetValue(user, out ConcurrentSet<string> effectiveRoles))
-                return effectiveRoles;
-
-            // Find all effective roles
-            effectiveRoles = new ConcurrentSet<string>();
-            foreach (string roleName in uRoles) {
-                Role role = GetRole(roleName);
-                if (role == null)
+            while (adding.Any()) {
+                Role cur = adding.Dequeue();
+                if (effectiveRoles.Any(r => r.ID == cur.ID))
                     continue;
 
-                effectiveRoles.Add(roleName);
-                foreach (Role child in GetWithChildren(role))
-                    effectiveRoles.Add(child.Name);
+                effectiveRoles.Add(cur);
+                int? curID = cur.ParentID;
+                if (curID != null)
+                    adding.Enqueue(await this.Database.Roles.SingleOrDefaultAsync(r => r.ID == curID));
             }
 
-            _effectiveRolesCache.AddOrUpdate(user, effectiveRoles, (key, value) => effectiveRoles);
             return effectiveRoles;
         }
 
-        private IEnumerable<Role> GetWithChildren(Role role) => GetWithChildren(role.Name);
-
-        private IEnumerable<Role> GetWithChildren(string role) {
-            Queue<string> search = new Queue<string>();
-            search.Enqueue(role);
-            HashSet<string> children = new HashSet<string>();
-
-            while (search.Any()) {
-                string cur = search.Dequeue();
-                if (children.Contains(cur))
-                    continue;
-
-                children.Add(cur);
-                foreach (Role child in Config.Roles.Where(r => r.Parent == cur)) {
-                    search.Enqueue(child.Name);
-                }
+        public async Task<IEnumerable<Role>> GetEffectiveRolesAsync(Role role) {
+            // Using a recursive CTE would probably be a lot faster than this
+            HashSet<Role> effectiveRoles = new HashSet<Role>();
+            Role cur = role;
+            while (true) {
+                effectiveRoles.Add(cur);
+                int? curID = cur.ParentID;
+                if (curID == null)
+                    break;
+                cur = await this.Database.Roles.SingleOrDefaultAsync(r => r.ID == curID);
             }
+            return effectiveRoles;
+        }
 
-            return children.Select(GetRole).Where(child => child != null);
+        public async Task<bool> HasPermissionAsync(ulong? guild, ulong user, string permissionName) {
+            // TODO
+            return permissionName.StartsWith("command.stats") || permissionName.StartsWith("command.skills")
+                   || user == 111304027387469824UL || user == 247080708454088705UL
+                   ;
+            //IEnumerable<Role> roles = await GetEffectiveRolesAsync((long?) guild, (long?) user);
+            //return await HasPermissionAsync(roles, permissionName);
+        }
+
+        public async Task<bool> HasPermissionAsync(ulong guild, string roleName, string permissionName) {
+            Role role = await this.GetRoleAsync((long?) guild, roleName);
+            return await this.HasPermissionAsync(role, permissionName);
+        }
+
+        public async Task<bool> HasPermissionAsync(Role role, string permissionName) {
+            IEnumerable<Role> roles = await this.GetEffectiveRolesAsync(role);
+            return await this.HasPermissionAsync(roles, permissionName);
+        }
+
+        public async Task<bool> HasPermissionAsync(IEnumerable<Role> roles, string permissionName) {
+            foreach (Role effectiveRole in roles)
+                if (await this.HasExplicitPermissionAsync(effectiveRole, permissionName))
+                    return true;
+
+            return false;
+        }
+
+        public async Task<bool> HasExplicitPermissionAsync(Role role, string permissionName) {
+            string[] permissionParts = permissionName.Split('.');
+            return await this.Database.Permissions.Where(p => p.RoleID == role.ID).ToAsyncEnumerable().Any(p => {
+                string[] parts = p.Name.Split('.');
+
+                for (int i = 0; i < parts.Length; i++) {
+                    if (parts[i] == "*")
+                        return true;
+                    if (!string.Equals(parts[i], permissionParts[i], StringComparison.OrdinalIgnoreCase))
+                        return false;
+                }
+
+                return true;
+            });
+        }
+
+        public async Task<bool> CreateRoleAsync(ulong? guild, string roleName, string parent = null) {
+            // ReSharper disable once ImplicitlyCapturedClosure (parent)
+            if (await this.Database.Roles.AnyAsync(r => r.GuildID == (long?) guild && r.Name == roleName))
+                return false;
+
+            this.Database.Roles.Add(new Role {
+                GuildID = (long?) guild,
+                Name = roleName,
+                ParentID = parent == null ? null : this.Database.Roles.SingleOrDefault(r => r.GuildID == (long?) guild && r.Name == parent)?.ID
+            });
+
+            await this.Database.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> DeleteRoleAsync(ulong? guild, string roleName) {
+            Role role = await this.GetRoleAsync((long?) guild, roleName);
+            if (role == null)
+                return false;
+
+            this.Database.Roles.Remove(role);
+            this.Database.RoleAssignments.RemoveRange(this.Database.RoleAssignments.Where(a => a.RoleID == role.ID));
+            await this.Database.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> AssignRoleAsync(ulong? guild, string roleName, ulong? user) {
+            Role role = await this.GetRoleAsync((long?) guild, roleName);
+            if (role == null)
+                return false;
+
+            if (this.Database.RoleAssignments.Any(a => a.RoleID == role.ID && a.UserID == (long?) user))
+                return false;
+
+            this.Database.RoleAssignments.Add(new RoleAssignment {
+                RoleID = role.ID,
+                UserID = (long?) user
+            });
+            await this.Database.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UnassignRoleAsync(ulong? guild, string roleName, ulong? user) {
+            Role role = await this.GetRoleAsync((long?) guild, roleName);
+            if (role == null)
+                return false;
+
+            List<RoleAssignment> assignments = await this.Database.RoleAssignments.Where(a => a.RoleID == role.ID && a.UserID == (long?) user).ToListAsync();
+            if (!assignments.Any())
+                return false;
+
+            this.Database.RoleAssignments.RemoveRange(assignments);
+            await this.Database.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> GivePermissionAsync(ulong? guild, string roleName, string permissionName) {
+            Role role = await this.GetRoleAsync((long?) guild, roleName);
+            if (role == null)
+                return false;
+
+            if (this.Database.Permissions.Any(p => p.Name == permissionName && p.RoleID == role.ID))
+                return false;
+
+            this.Database.Permissions.Add(new Permission {
+                Name = permissionName,
+                RoleID = role.ID
+            });
+            await this.Database.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RevokePermissionAsync(ulong? guild, string roleName, string permissionName) {
+            Role role = await this.GetRoleAsync((long?) guild, roleName);
+            if (role == null)
+                return false;
+
+
+            List<Permission> permissions = await this.Database.Permissions.Where(p => p.Name == permissionName && p.RoleID == role.ID).ToListAsync();
+            if (!permissions.Any())
+                return false;
+
+            this.Database.Permissions.RemoveRange(permissions);
+            await this.Database.SaveChangesAsync();
+            return true;
         }
     }
 }

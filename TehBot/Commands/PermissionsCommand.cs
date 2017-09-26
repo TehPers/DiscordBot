@@ -1,24 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 using TehPers.Discord.TehBot.Permissions;
+using TehPers.Discord.TehBot.Permissions.Tables;
 
 namespace TehPers.Discord.TehBot.Commands {
     public class PermissionsCommand : Command {
 
-        // Should work like this:
-        // .perms <action> <target> [args...]
-        // action can be add/remove/assign/unassign/entrust/untrust
-
         public PermissionsCommand(string name) : base(name) {
-            Documentation = new CommandDocs() {
+            this.Documentation = new CommandDocs() {
                 Description = "Manipulates roles on a user",
                 Arguments = new List<CommandDocs.Argument>() {
-                    new CommandDocs.Argument("action", "[add] Creates a new role | [remove] Deletes a role | [assign] Assigns a role to a user | [unassign] Unassigns a role from a user | [entrust] Adds a permission to a role | [revoke] Removes a permission from a role | [list] Lists a user's roles"),
+                    new CommandDocs.Argument("action", "[create] Creates a new role | [delete] Deletes a role | [assign] Assigns a role to a user | [unassign] Unassigns a role from a user | [entrust] Adds a permission to a role | [revoke] Removes a permission from a role | [list] Lists a user's roles"),
                     new CommandDocs.Argument("role", "role to perform the action with"),
                     new CommandDocs.Argument("arg", "user(s), parent role, or permission(s)", true)
                 }
@@ -30,44 +28,27 @@ namespace TehPers.Discord.TehBot.Commands {
                 return false;
 
             PermissionHandler perms = Bot.Instance.Permissions;
-            IUser user = msg.Author;
             string action = args[0].ToLower();
+            SocketUser user = msg.Author;
+            SocketGuild guild = msg.GetGuild();
 
-            // Make sure they have permission to use this command
-            if (!perms.HasPermission(user, $"{this.ConfigNamespace}.{action}"))
+            if (!perms.HasPermissionAsync(guild.Id, user.Id, $"{this.ConfigNamespace}.{action}").Result)
                 return false;
-
-            if (action == "list")
-                return true;
-
-            if (args.Length < 2)
-                return false;
-
-            string role = args[1].ToLower();
-            string arg = args.Length > 2 ? args[2].ToLower() : null;
-
-            // Get their effective roles
-            HashSet<string> effectiveRoles = new HashSet<string>(perms.GetEffectiveRoles(user));
 
             switch (action) {
-                case "add":
-                    // Make sure that role doesn't already exist, parent (if specified) exists, and the user has above the given role
-                    if (arg != null && perms.Roles.All(r => r.Name != arg))
-                        return false;
-                    return perms.Roles.All(r => r.Name != role) && (arg == null || effectiveRoles.Except(perms.GetRoles(user)).Contains(arg));
-                case "remove":
+                case "list":
+                    // No arguments needed
+                    return true;
+                case "create":
+                case "delete":
+                    // Role is needed
+                    return args.Length > 1;
                 case "assign":
                 case "unassign":
-                    // Make sure that role exists and the user has above the given role
-                    return perms.IsAdmin(user) || effectiveRoles.Except(perms.GetRoles(user)).Contains(role);
                 case "entrust":
                 case "revoke":
-                    // Make sure that the permission name is given
-                    if (arg == null)
-                        return false;
-
-                    // Make sure that role exists and the user has above the given role
-                    return perms.Roles.Any(r => r.Name == role) && effectiveRoles.Except(perms.GetRoles(user)).Contains(role);
+                    // An argumnt after role is needed
+                    return args.Length > 2;
                 default:
                     return false;
             }
@@ -77,47 +58,91 @@ namespace TehPers.Discord.TehBot.Commands {
             Bot bot = Bot.Instance;
             PermissionHandler perms = bot.Permissions;
             string action = args[0].ToLower();
-            string role = args.Length > 1 ? args[1].ToLower() : null;
+            string role = args.Length > 1 ? args[1] : null;
             string[] cargs = args.Length > 2 ? args.Skip(2).ToArray() : new string[0];
+            long guild = (long) msg.GetGuild().Id;
 
             switch (action) {
-                case "add":
-                    Role newRole = new Role(role);
-                    if (cargs.Length > 0)
-                        newRole.Parent = cargs[0];
-                    perms.AddRole(newRole);
-                    await msg.Reply($"Role \"{role}\" added successfully");
+                case "create":
+                    if (await perms.CreateRoleAsync((ulong) guild, role, cargs.FirstOrDefault()))
+                        await msg.Reply($"Role \"{role}\" created successfully");
+                    else
+                        await msg.Reply($"Role \"{role}\" already exists");
                     break;
-                case "remove":
-                    if (perms.RemoveRole(role))
-                        await msg.Reply($"Role \"{role}\" removed successfully");
+                case "delete":
+                    if (await perms.DeleteRoleAsync(msg.GetGuild().Id, role))
+                        await msg.Reply($"Role \"{role}\" deleted successfully");
                     else
                         await msg.Reply($"Role \"{role}\" doesn't exist");
                     break;
                 case "assign":
+                    List<string> usersAssigned = new List<string>();
                     foreach (SocketUser user in msg.MentionedUsers)
-                        perms.GiveRole(user, role);
-                    await msg.Reply($"Role \"{role}\" assigned to {string.Join(", ", msg.MentionedUsers.Select(user => user.Username))}");
+                        if (await perms.AssignRoleAsync((ulong) guild, role, user.Id))
+                            usersAssigned.Add($"{user.Mention}");
+
+                    if (usersAssigned.Any())
+                        await msg.Reply($"Role \"{role}\" assigned to {string.Join(", ", usersAssigned)}");
+                    else
+                        await msg.Reply($"Role \"{role}\" assigned to nobody");
                     break;
                 case "unassign":
-                    List<string> usersRemoved = (from user in msg.MentionedUsers
-                                                 where perms.TakeRole(user, role)
-                                                 select user.Username).ToList();
-                    await msg.Reply($"Role \"{role}\" assigned to {string.Join(", ", usersRemoved)}");
+                    List<string> usersUnassigned = new List<string>();
+                    foreach (SocketUser user in msg.MentionedUsers)
+                        if (await perms.UnassignRoleAsync((ulong) guild, role, user.Id))
+                            usersUnassigned.Add($"{user.Mention}");
+
+                    if (usersUnassigned.Any())
+                        await msg.Reply($"Role \"{role}\" removed from {string.Join(", ", usersUnassigned)}");
+                    else
+                        await msg.Reply($"Role \"{role}\" removed from nobody");
                     break;
                 case "entrust":
+                    List<string> permissionsAdded = new List<string>();
                     foreach (string arg in cargs)
-                        perms.GivePermission(role, arg);
-                    await msg.Reply($"Role \"{role}\" given access to {string.Join(", ", cargs.Select(carg => $"\"{carg}\""))}");
+                        if (await perms.GivePermissionAsync((ulong) guild, role, arg))
+                            permissionsAdded.Add(arg);
+
+                    if (permissionsAdded.Any())
+                        await msg.Reply($"Permissions {string.Join(", ", permissionsAdded)} added for role \"{role}\"");
+                    else
+                        await msg.Reply($"No permissions added for role \"{role}\"");
                     break;
                 case "revoke":
-                    List<string> permsRemoved = (from arg in cargs
-                                                 where perms.RemovePermission(role, arg)
-                                                 select arg).ToList();
-                    await msg.Reply($"Role \"{role}\" assigned to {string.Join(", ", permsRemoved)}");
+                    List<string> permissionsRevoked = new List<string>();
+                    foreach (string arg in cargs)
+                        if (await perms.RevokePermissionAsync((ulong) guild, role, arg))
+                            permissionsRevoked.Add(arg);
+
+                    if (permissionsRevoked.Any())
+                        await msg.Reply($"Permissions {string.Join(", ", permissionsRevoked)} revoked for role \"{role}\"");
+                    else
+                        await msg.Reply($"No permissions revoked for role \"{role}\"");
                     break;
                 case "list":
-                    await msg.Channel.SendMessageAsync($"{msg.Author.Mention} Roles: {string.Join(", ", perms.Roles.Select(r => r.Name))}");
+                    SocketUser target = msg.MentionedUsers.FirstOrDefault();
+
+                    List<Role> roles = await perms.GetRoles(guild, (long?) target?.Id).ToListAsync();
+                    List<Role> effectiveRoles = (await perms.GetEffectiveRolesAsync(roles)).ToList();
+
+                    HashSet<int> globalRoles = effectiveRoles.Select(r => r.ID).Intersect(perms.GlobalRoles.Select(r => r.ID)).ToHashSet();
+                    HashSet<int> inheritedRoles = effectiveRoles.Select(r => r.ID).Except(roles.Select(r => r.ID)).ToHashSet();
+
+                    IEnumerable<string> roleStrings = effectiveRoles.OrderBy(r => {
+                        if (globalRoles.Contains(r.ID))
+                            return 1;
+                        if (inheritedRoles.Contains(r.ID))
+                            return 0;
+                        return -1;
+                    }).Select(r => {
+                        string s = r.Name;
+                        if (!globalRoles.Contains(r.ID))
+                            s = $"**{s}**";
+                        if (inheritedRoles.Contains(r.ID))
+                            s = $"_{s}_";
+                        return s;
+                    });
+                    await msg.Channel.SendMessageAsync($"{msg.Author.Mention} Roles for {target?.Mention ?? "everyone"}: {string.Join(", ", roleStrings)}");
                     break;
                 default:
                     return;

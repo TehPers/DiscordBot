@@ -19,7 +19,7 @@ using Microsoft.VisualBasic.FileIO;
 using static TehPers.Discord.TehBot.Commands.CommandDocs;
 
 namespace TehPers.Discord.TehBot.Commands {
-    public class StatsCommand : Command {
+    public class GameStatsCommand : Command {
         private const string SHEET = "1x8QcIebWWDwkjAv0smQsJEqGp_AyOc_QhPgBrdGTxaE";
 
         public override CommandDocs Documentation { get; }
@@ -27,11 +27,13 @@ namespace TehPers.Discord.TehBot.Commands {
 
         private readonly SheetsService _service;
 
-        public StatsCommand(string name) : base(name) {
-            Documentation = new CommandDocs {
+        public string Category { get; }
+
+        public GameStatsCommand(string name, string category) : base(name) {
+            this.Category = category;
+            this.Documentation = new CommandDocs {
                 Description = "Displays the stats for whatever was matched",
                 Arguments = new List<Argument> {
-                    new Argument("category", "The category to search (for example *characters*)"),
                     new Argument("query", "What you're trying to find stats for, ie. a character's name")
                 }
             };
@@ -50,31 +52,31 @@ namespace TehPers.Discord.TehBot.Commands {
                 Bot.Instance.Log("Credential file saved to: " + credPath, LogSeverity.Verbose, "GOOGLE");
             }
 
-            _service = new SheetsService(new BaseClientService.Initializer {
+            this._service = new SheetsService(new BaseClientService.Initializer {
                 HttpClientInitializer = credentials,
                 ApplicationName = "Teh's Discord Bot"
             });
 
-            ReloadStats().Wait();
+            this.ReloadStats().Wait();
         }
 
         public async Task<bool> ReloadStats() {
-            Sheets.Clear();
+            this.Sheets.Clear();
 
-            Spreadsheet spreadsheet = await _service.Spreadsheets.Get(StatsCommand.SHEET).ExecuteAsync();
+            Spreadsheet spreadsheet = await this._service.Spreadsheets.Get(GameStatsCommand.SHEET).ExecuteAsync();
             IList<Sheet> sheets = spreadsheet.Sheets;
 
             foreach (Sheet sheet in sheets) {
                 string sheetName = sheet.Properties.Title;
-                SheetData sheetData = Sheets.GetOrAdd(sheetName, k => new SheetData());
+                SheetData sheetData = this.Sheets.GetOrAdd(sheetName, k => new SheetData());
 
                 // Get stat names
-                ValueRange response = _service.Spreadsheets.Values.Get(StatsCommand.SHEET, $"{sheetName}!A2:A").Execute();
+                ValueRange response = this._service.Spreadsheets.Values.Get(GameStatsCommand.SHEET, $"{sheetName}!A2:A").Execute();
                 foreach (object stat in response.Values.SelectMany(row => row))
                     sheetData.StatNames.Enqueue(stat.ToString());
 
                 // Get stats
-                response = _service.Spreadsheets.Values.Get(StatsCommand.SHEET, $"{sheetName}!A1:{sheetData.StatNames.Count + 1}").Execute();
+                response = this._service.Spreadsheets.Values.Get(GameStatsCommand.SHEET, $"{sheetName}!A1:{sheetData.StatNames.Count + 1}").Execute();
                 IList<object> firstRow = response.Values.First();
                 foreach (IList<object> row in response.Values.Skip(1)) {
                     string stat = row.First().ToString();
@@ -88,26 +90,26 @@ namespace TehPers.Discord.TehBot.Commands {
                     }
                 }
             }
-            
+
             return true;
         }
 
         public override bool Validate(SocketMessage msg, string[] args) {
-            return args.Length > 1;
+            return args.Any();
         }
 
         public override async Task Execute(SocketMessage msg, string[] args) {
-            string sheet = args[0];
-            string query = string.Join(" ", args.Skip(1)).ToLower();
-            
+            string sheet = this.Category;
+            string query = string.Join(" ", args).ToLower();
+
             if (sheet != null)
-                await ShowStats(msg, sheet, query);
+                await this.ShowStats(msg, sheet, query);
         }
 
         public async Task ShowStats(SocketMessage msg, string sheet, string query) {
-            SheetData sheetData = Sheets.FirstOrDefault(kv => kv.Key.Equals(sheet, StringComparison.OrdinalIgnoreCase)).Value;
+            SheetData sheetData = this.Sheets.FirstOrDefault(kv => kv.Key.Equals(sheet, StringComparison.OrdinalIgnoreCase)).Value;
             if (sheetData == null) {
-                await msg.Channel.SendMessageAsync($"{msg.Author.Mention} Category '{sheet}' doesn't exist. Possible categories: {string.Join(", ", Sheets.Select(kv => $"{kv.Key}"))}");
+                await msg.Channel.SendMessageAsync($"{msg.Author.Mention} Category '{sheet}' doesn't exist. Possible categories: {string.Join(", ", this.Sheets.Select(kv => $"{kv.Key}"))}");
                 return;
             }
 
@@ -116,7 +118,7 @@ namespace TehPers.Discord.TehBot.Commands {
 
             // If no matches, try to find the keys containing the string
             if (!matches.Any())
-                matches = sheetData.Stats.Keys.Where(k => k.Contains(query));
+                matches = sheetData.Stats.Keys.Where(k => k.IndexOf(query, StringComparison.OrdinalIgnoreCase) != -1);
 
             if (matches.Any()) {
                 string chosen = matches.First();
@@ -145,7 +147,7 @@ namespace TehPers.Discord.TehBot.Commands {
                                                                select $"{kv.Key}: {kv.Value}"));
                     }
                 } else {
-                    await msg.Channel.SendMessageAsync($"{msg.Author.Mention} Stats for '{chosen}' in category '{sheet}'\n" + string.Join("\n",
+                    await msg.Channel.SendMessageAsync($"{msg.Author.Mention} Stats for '{chosen}'\n" + string.Join("\n",
                                                            from kv in sheetData.Stats[chosen]
                                                            where !string.IsNullOrEmpty(kv.Value)
                                                            orderby statNamesList.IndexOf(kv.Key)

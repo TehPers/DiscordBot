@@ -8,7 +8,7 @@ using Discord.WebSocket;
 namespace TehPers.Discord.TehBot.Commands {
     public class ForgetCommand : Command {
         public ForgetCommand(string name) : base(name) {
-            Documentation = new CommandDocs() {
+            this.Documentation = new CommandDocs() {
                 Description = "Forgets a remembered command",
                 Arguments = new List<CommandDocs.Argument>() {
                     new CommandDocs.Argument("name", "The name of the command to forget")

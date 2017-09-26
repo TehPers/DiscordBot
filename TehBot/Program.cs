@@ -14,7 +14,7 @@ namespace TehPers.Discord.TehBot {
         public async Task MainAsync() {
             Bot bot = new Bot();
             if (await bot.StartAsync())
-                await ConsoleHandler();
+                await this.ConsoleHandler();
             else
                 Console.Read();
         }

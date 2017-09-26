@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
+using System.Data.Entity;
+using System.Data.SQLite;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Remoting.Channels;
+using System.Runtime.Remoting.Contexts;
 using System.Text;
 using System.Threading.Tasks;
 using Discord;
@@ -12,6 +17,8 @@ using Newtonsoft.Json;
 using NLua;
 using TehPers.Discord.TehBot.Commands;
 using TehPers.Discord.TehBot.Permissions;
+using TehPers.Discord.TehBot.Permissions.Tables;
+using TehPers.Discord.TehBot.Properties;
 using static TehPers.Discord.TehBot.Config;
 
 namespace TehPers.Discord.TehBot {
@@ -23,6 +30,8 @@ namespace TehPers.Discord.TehBot {
 
         public Config Config { get; set; }
 
+        public BotDatabase Database { get; set; }
+
         public PermissionHandler Permissions { get; }
 
         public Bot() {
@@ -30,30 +39,47 @@ namespace TehPers.Discord.TehBot {
                 return;
             Bot.Instance = this;
 
-            Permissions = new PermissionHandler();
+            this.Permissions = new PermissionHandler();
 
-            Client = new DiscordSocketClient();
-            Client.Log += LogAsync;
-            Client.MessageReceived += MessageReceivedAsync;
-            Client.Ready += ReadyAsync;
+            string dbPath = Path.Combine(Directory.GetCurrentDirectory(), "data.db");
+            bool newDb = false;
+            if (!File.Exists(dbPath)) {
+                this.Log($"Created database at {dbPath}");
+                SQLiteConnection.CreateFile(dbPath);
+                newDb = true;
+            }
 
-            AfterLoaded += async (sender, e) => {
+            DbConnection connection = new SQLiteConnection($"Data Source={dbPath};");
+            connection.Open();
+            this.Database = new BotDatabase(connection);
+
+            if (newDb) {
+                this.Database.CreateSchema();
+                this.Database.SaveChanges();
+            }
+
+            this.Client = new DiscordSocketClient();
+            this.Client.Log += this.LogAsync;
+            this.Client.MessageReceived += this.MessageReceivedAsync;
+            this.Client.Ready += this.ReadyAsync;
+
+            this.AfterLoaded += async (sender, e) => {
                 List<Task> tasks = new List<Task>();
 
                 Command.ReloadCommands();
 
-                if (Config.Strings.TryGetValue("bot.username", out string name) && Client.CurrentUser.Username != name) {
-                    Log(new LogMessage(LogSeverity.Verbose, "LOG", $"Setting username to {name}"));
-                    tasks.Add(Client.CurrentUser.ModifyAsync(properties => properties.Username = name));
+                if (this.Config.Strings.TryGetValue("bot.username", out string name) && this.Client.CurrentUser.Username != name) {
+                    this.Log(new LogMessage(LogSeverity.Verbose, "LOG", $"Setting username to {name}"));
+                    tasks.Add(this.Client.CurrentUser.ModifyAsync(properties => properties.Username = name));
                 }
 
-                if (Config.Strings.TryGetValue("bot.game", out string game) && Client.CurrentUser.Game?.Name != game) {
-                    Log(new LogMessage(LogSeverity.Verbose, "LOG", $"Setting game to {game}"));
+                if (this.Config.Strings.TryGetValue("bot.game", out string game) && this.Client.CurrentUser.Game?.Name != game) {
+                    this.Log(new LogMessage(LogSeverity.Verbose, "LOG", $"Setting game to {game}"));
                     string format = string.Format(game, Command.Prefix);
-                    tasks.Add(Client.SetGameAsync(format));
+                    tasks.Add(this.Client.SetGameAsync(format));
                 }
 
-                if (Config.Strings.TryGetValue("bot.avatar", out string picture)) {
+                /*if (Config.Strings.TryGetValue("bot.avatar", out string picture)) {
                     Log(new LogMessage(LogSeverity.Verbose, "LOG", $"Setting avatar to {picture}"));
                     string path = Path.Combine(Directory.GetCurrentDirectory(), picture);
 
@@ -66,39 +92,42 @@ namespace TehPers.Discord.TehBot {
                             Log(new LogMessage(LogSeverity.Verbose, "LOG", $"Failed to set avatar"));
                         }
                     }
+                }*/
+
+                if (newDb) {
+                    // Create roles
+                    tasks.Add(this.Permissions.CreateRoleAsync(null, "Global Administrator"));
+                    tasks.Add(this.Permissions.CreateRoleAsync(null, "Default"));
+                    await Task.WhenAll(tasks.ToArray());
+                    tasks.Clear();
+
+                    // Create permissions
+                    tasks.Add(this.Permissions.GivePermissionAsync(null, "Global Administrator", "*"));
+                    tasks.AddRange(from command in Command.CommandList.Values
+                                   where command.DefaultPermission
+                                   select this.Permissions.GivePermissionAsync(null, "Default", command.ConfigNamespace));
+
+                    // Create role assignments
+                    tasks.Add(this.Permissions.AssignRoleAsync(null, "Default", null));
+                    tasks.Add(this.Permissions.AssignRoleAsync(null, "Global Administrator", 247080708454088705UL));
                 }
 
                 await Task.WhenAll(tasks);
             };
-
-            // Set up interpreter
-            // ReSharper disable once InconsistentNaming
-            LuaTable _G = Interpreter.GetTable("_G");
-            _G["time"] = Interpreter.LoadString(
-                "local time = ({...})[1]\n" +
-                "return function(format)\n" +
-                "  return time(format)\n" +
-                "end",
-                "Bot").Call(new Func<string, string>(Time)).FirstOrDefault() as LuaFunction;
-
-            string Time(string format = null)
-            {
-                return format == null ? DateTime.Now.ToString(CultureInfo.CurrentCulture) : DateTime.Now.ToString(format, CultureInfo.CurrentCulture);
-            }
         }
 
         public async Task<bool> StartAsync() {
-            LoadOnly();
+            this.LoadOnly();
 
-            string token = Config.Secrets?.Token;
+            string token = this.Config.Secrets?.Token;
             if (string.IsNullOrEmpty(token)) {
-                Log($"Invalid Discord token: {token ?? "(null)"}", LogSeverity.Critical);
+                this.Log($"Invalid Discord token: {token ?? "(null)"}", LogSeverity.Critical);
                 return false;
             }
 
-            await Client.LoginAsync(TokenType.Bot, token);
+            await this.Client.LoginAsync(TokenType.Bot, token);
 
-            await Client.StartAsync();
+            await this.Client.StartAsync();
 
             return true;
         }
@@ -108,41 +137,40 @@ namespace TehPers.Discord.TehBot {
                 return;
 
             string path = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
-            Log(new LogMessage(LogSeverity.Verbose, "BOT", "Saving config"));
-            File.WriteAllText(path, JsonConvert.SerializeObject(Config, Formatting.Indented));
+            this.Log(new LogMessage(LogSeverity.Verbose, "BOT", "Saving config"));
+            File.WriteAllText(path, JsonConvert.SerializeObject(this.Config, Formatting.Indented));
 
-            OnAfterSaved();
+            this.OnAfterSaved();
         }
 
         private void LoadOnly() {
-            Log(new LogMessage(LogSeverity.Verbose, "BOT", "Loading config"));
+            this.Log(new LogMessage(LogSeverity.Verbose, "BOT", "Loading config"));
 
             string config = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
             string secrets = Path.Combine(Directory.GetCurrentDirectory(), "Secret");
 
             if (File.Exists(config)) {
-                Config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(config));
+                this.Config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(config));
             } else {
-                Log(new LogMessage(LogSeverity.Verbose, "BOT", "Config not found, creating new config"));
-                Config = new Config();
-                Save();
+                this.Log(new LogMessage(LogSeverity.Verbose, "BOT", "Config not found, creating new config"));
+                this.Config = new Config();
+                this.Save();
             }
 
             config = Path.Combine(secrets, "bot.json");
             if (File.Exists(config)) {
-                Config.Secrets = JsonConvert.DeserializeObject<SecretConfigs>(File.ReadAllText(config));
+                this.Config.Secrets = JsonConvert.DeserializeObject<SecretConfigs>(File.ReadAllText(config));
             } else {
                 Directory.CreateDirectory(secrets);
-                Log(new LogMessage(LogSeverity.Verbose, "BOT", "Secret config not found, creating new config"));
-                Config = new Config();
-                Save();
+                this.Log(new LogMessage(LogSeverity.Verbose, "BOT", "Secret config not found, creating new config"));
+                this.Config = new Config();
+                this.Save();
             }
         }
 
         public void Load() {
-            LoadOnly();
-            Permissions.Load();
-            OnAfterLoaded();
+            this.LoadOnly();
+            this.OnAfterLoaded();
         }
 
         #region Handlers
@@ -151,35 +179,33 @@ namespace TehPers.Discord.TehBot {
                 return;
 
             if (msg.Content.StartsWith(Command.Prefix)) {
-                await CommandHandlerAsync(msg);
+                await this.CommandHandlerAsync(msg);
             }
         }
 
-        public Task LogAsync(string message, LogSeverity severity = LogSeverity.Info, string source = "BOT", Exception exception = null) => LogAsync(new LogMessage(severity, source, message, exception));
+        public Task LogAsync(string message, LogSeverity severity = LogSeverity.Info, string source = "BOT", Exception exception = null) => this.LogAsync(new LogMessage(severity, source, message, exception));
         public Task LogAsync(LogMessage msg) {
-            Log(msg);
+            this.Log(msg);
             return Task.CompletedTask;
         }
 
-        public void Log(string message, LogSeverity severity = LogSeverity.Info, string source = "BOT", Exception exception = null) => Log(new LogMessage(severity, source, message, exception));
-        public void Log(LogMessage msg) {
-            Console.WriteLine(msg.ToString());
-        }
+        public void Log(string message, LogSeverity severity = LogSeverity.Info, string source = "BOT", Exception exception = null) => this.Log(new LogMessage(severity, source, message, exception));
+        public void Log(LogMessage msg) => Console.WriteLine(msg.ToString());
 
         private Task ReadyAsync() {
-            Load();
+            this.Load();
             return Task.CompletedTask;
         }
         #endregion
 
         public async Task CommandHandlerAsync(SocketMessage msg) {
-            string[] components = msg.Content.Substring(Command.Prefix.Length).Split(' ');
+            string[] components = msg.Content.Substring(Command.Prefix.Length).FixPunctuation().Split(' ');
             string cmd = components.First().ToLower();
 
             // Parse arguments
             string[] args = Bot.ParseArgs(string.Join(" ", components.Skip(1))).ToArray();
-            if (Command.CommandList.TryGetValue(cmd, out Command command) && Permissions.HasPermission(msg.Author, command.ConfigNamespace)) {
-                Log(new LogMessage(LogSeverity.Verbose, "LOG", $"[#{msg.Channel.Name}] {msg.Author.Discriminator}: {msg.Content}"));
+            if (Command.CommandList.TryGetValue(cmd, out Command command) && await this.Permissions.HasPermissionAsync(msg.GetGuild().Id, msg.Author.Id, command.ConfigNamespace)) {
+                this.Log(new LogMessage(LogSeverity.Verbose, "LOG", $"[#{msg.Channel.Name}] {msg.Author.Discriminator}: {msg.Content}"));
 
                 if (command.Validate(msg, args))
                     await command.Execute(msg, args);
@@ -232,19 +258,28 @@ namespace TehPers.Discord.TehBot {
             return argsList;
         }
 
-        public Lua Interpreter { get; } = new Lua();
+        public Lua GetInterpreter() => this.GetInterpreter(null);
+        public Lua GetInterpreter(Action<object> print, uint maxPrints = 1) {
+            Lua interpreter = new Lua();
+
+            string Time(string format) => format == null ? DateTime.Now.ToString(CultureInfo.CurrentCulture) : DateTime.Now.ToString(format, CultureInfo.CurrentCulture);
+
+            interpreter.LoadString(Resources.InterpreterInit, "init").Call((Func<string, string>) Time, print);
+
+            return interpreter;
+        }
 
         public void Dispose() {
-            Client?.Dispose();
-            Interpreter?.Dispose();
+            this.Client?.Dispose();
+            this.Database.Dispose();
         }
 
         #region Events
         public event EventHandler AfterLoaded;
-        protected virtual void OnAfterLoaded() => AfterLoaded?.Invoke(this, EventArgs.Empty);
+        protected virtual void OnAfterLoaded() => this.AfterLoaded?.Invoke(this, EventArgs.Empty);
 
         public event EventHandler AfterSaved;
-        protected virtual void OnAfterSaved() => AfterSaved?.Invoke(this, EventArgs.Empty);
+        protected virtual void OnAfterSaved() => this.AfterSaved?.Invoke(this, EventArgs.Empty);
         #endregion
     }
 }

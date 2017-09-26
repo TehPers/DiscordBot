@@ -15,9 +15,9 @@ namespace TehPers.Discord.TehBot.Commands {
             public string Description { get; }
 
             public Argument(string name, string description, bool optional = false) {
-                Name = name;
-                Description = description;
-                Optional = optional;
+                this.Name = name;
+                this.Description = description;
+                this.Optional = optional;
             }
         }
     }

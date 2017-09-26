@@ -14,7 +14,7 @@ using NLua.Exceptions;
 namespace TehPers.Discord.TehBot.Commands {
     public class RememberCommand : Command {
         public RememberCommand(string name) : base(name) {
-            Documentation = new CommandDocs() {
+            this.Documentation = new CommandDocs() {
                 Description = "Remembers commands that can be used in the future",
                 Arguments = new List<CommandDocs.Argument>() {
                     new CommandDocs.Argument("name", "Name of the command to create"),
@@ -23,15 +23,15 @@ namespace TehPers.Discord.TehBot.Commands {
                 }
             };
 
-            Bot.Instance.Client.MessageReceived += MessageReceivedAsync;
-            Load();
+            Bot.Instance.Client.MessageReceived += this.MessageReceivedAsync;
+            this.Load();
 
             //Interpreter.DoString("setmetatable(_G, {__index = function(t, k) if k:lower() == \"time\" then return os.time() end })", "setup");
         }
 
         public override void Unload() {
-            Bot.Instance.Client.MessageReceived -= MessageReceivedAsync;
-            Save();
+            Bot.Instance.Client.MessageReceived -= this.MessageReceivedAsync;
+            this.Save();
         }
 
         private async Task MessageReceivedAsync(SocketMessage msg) {
@@ -39,12 +39,12 @@ namespace TehPers.Discord.TehBot.Commands {
                 return;
 
             string unparsed = msg.Content;
-            if (unparsed.StartsWith(RPrefix)) {
-                string[] components = unparsed.Substring(RPrefix.Length).Split(' ');
+            if (unparsed.StartsWith(this.RPrefix)) {
+                string[] components = unparsed.Substring(this.RPrefix.Length).Split(' ');
                 string name = components.First().ToLower();
                 string[] args = Bot.ParseArgs(string.Join(" ", components.Skip(1))).ToArray();
 
-                if (RememberedCommands.TryGetValue(name, out RCommand cmd)) {
+                if (this.RememberedCommands.TryGetValue(name, out RCommand cmd)) {
                     await cmd.ExecuteAsync(msg, args);
                 }
             }
@@ -67,23 +67,23 @@ namespace TehPers.Discord.TehBot.Commands {
                 Author = msg.Author.Id,
                 CreationDate = msg.CreatedAt
             };
-            if (RememberedCommands.TryGetValue(name, out RCommand cmd)) {
+            if (this.RememberedCommands.TryGetValue(name, out RCommand cmd)) {
                 Task send = msg.Channel.SendMessageAsync($"{msg.Author.Mention} Replacing command {name}");
-                RememberedCommands.AddOrUpdate(name, newCmd, (key, val) => newCmd);
+                this.RememberedCommands.AddOrUpdate(name, newCmd, (key, val) => newCmd);
                 await send;
             } else {
                 Task send = msg.Channel.SendMessageAsync($"{msg.Author.Mention} Creating command {name}");
-                RememberedCommands.AddOrUpdate(name, newCmd, (key, val) => newCmd);
+                this.RememberedCommands.AddOrUpdate(name, newCmd, (key, val) => newCmd);
                 await send;
             }
-            Save();
+            this.Save();
         }
 
         public void Save() {
             if (!Directory.Exists(Directory.GetCurrentDirectory()))
                 return;
 
-            File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "remember.json"), JsonConvert.SerializeObject(RememberedCommands, Formatting.Indented));
+            File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "remember.json"), JsonConvert.SerializeObject(this.RememberedCommands, Formatting.Indented));
         }
 
         public void Load() {
@@ -91,7 +91,7 @@ namespace TehPers.Discord.TehBot.Commands {
             if (!File.Exists(path))
                 return;
 
-            RememberedCommands = JsonConvert.DeserializeObject<ConcurrentDictionary<string, RCommand>>(File.ReadAllText(path));
+            this.RememberedCommands = JsonConvert.DeserializeObject<ConcurrentDictionary<string, RCommand>>(File.ReadAllText(path));
         }
 
         #region Properties
@@ -102,9 +102,9 @@ namespace TehPers.Discord.TehBot.Commands {
         public string RPrefix {
             get {
                 Config config = Bot.Instance.Config;
-                if (config.Strings.TryGetValue($"{ConfigNamespace}.prefix", out string prefix))
+                if (config.Strings.TryGetValue($"{this.ConfigNamespace}.prefix", out string prefix))
                     return prefix;
-                prefix = config.Strings.GetOrAdd($"{ConfigNamespace}.prefix", "!");
+                prefix = config.Strings.GetOrAdd($"{this.ConfigNamespace}.prefix", "!");
                 Bot.Instance.Save();
                 return prefix;
             }
@@ -129,32 +129,23 @@ namespace TehPers.Discord.TehBot.Commands {
 
             public async Task ExecuteAsync(SocketMessage msg, string[] args) {
                 try {
-                    Lua interpreter = Bot.Instance.Interpreter;
+                    using (Lua interpreter = Bot.Instance.GetInterpreter()) {
+                        // Get reference to _G
+                        // ReSharper disable once InconsistentNaming
+                        LuaTable _G = interpreter.GetTable("_G");
 
-                    // Get reference to _G
-                    // ReSharper disable once InconsistentNaming
-                    LuaTable _G = interpreter.GetTable("_G");
-                    if (_G == null) {
-                        interpreter.NewTable("_G");
-                        _G = interpreter.GetTable("_G");
+                        // Execute command
+                        if (!this.IsLua) {
+                            string output = this.Contents;
+                            //output = RCommand.VarMatcher.Replace(output, match => interpreter.DoString($"return (function(...) return {match.Value.Trim('%')} end)({string.Join(", ", args)})", Name).FirstOrDefault()?.ToString() ?? "nil");
+                            await msg.Channel.SendMessageAsync(output);
+                        } else {
+                            LuaFunction f = interpreter.LoadString(this.Contents, this.Name);
+                            f.Call(args.ToArray<object>());
+                        }
                     }
-
-                    // Set up the interpreter
-                    bool shouldPrint = true;
-                    _G["print"] = new Action<object>(output => {
-                        if (shouldPrint)
-                            Task.WaitAll(msg.Channel.SendMessageAsync(output?.ToString() ?? "nil"));
-                        shouldPrint = false;
-                    });
-
-                    // Execute command
-                    if (!IsLua) {
-                        string output = Contents;
-                        output = RCommand.VarMatcher.Replace(output, (match) => interpreter.DoString($"return (function(...) return {match.Value.Trim('%')} end)({string.Join(", ", args)})", Name).FirstOrDefault()?.ToString() ?? "nil");
-                        await msg.Channel.SendMessageAsync(output);
-                    } else {
-                        interpreter.DoString(Contents, Name);
-                    }
+                } catch (LuaException ex) {
+                    await msg.Channel.SendMessageAsync($"```{ex.Message}\n{ex.StackTrace}```");
                 } catch (Exception ex) {
                     await msg.Channel.SendMessageAsync($"```{ex.Message}\n{ex.StackTrace}```");
                 }

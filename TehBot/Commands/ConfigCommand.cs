@@ -8,7 +8,7 @@ using Discord.WebSocket;
 namespace TehPers.Discord.TehBot.Commands {
     public class ConfigCommand : Command {
         public ConfigCommand(string name) : base(name) {
-            Documentation = new CommandDocs() {
+            this.Documentation = new CommandDocs() {
                 Description = "Gets or sets a config setting",
                 Arguments = new List<CommandDocs.Argument>() {
                     new CommandDocs.Argument("type", "Type of config setting (string | number | bool)"),
