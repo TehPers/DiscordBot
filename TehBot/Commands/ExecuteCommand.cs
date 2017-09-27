@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Discord.WebSocket;
 using NLua;
+using NLua.Exceptions;
 using static KopiLua.Lua;
 
 namespace TehPers.Discord.TehBot.Commands {
@@ -26,10 +27,10 @@ namespace TehPers.Discord.TehBot.Commands {
             string code = string.Join(" ", args);
 
             try {
-                using (Lua interpreter = Bot.Instance.GetInterpreter())
-                    interpreter.DoString("exec", code);
-            } catch (LuaException ex) {
-                await msg.Channel.SendMessageAsync($"```{ex.Message}\n{ex.StackTrace}```");
+                using (Lua interpreter = Bot.Instance.GetInterpreter(msg.Channel))
+                    interpreter.DoString(code, this.ConfigNamespace);
+            } catch (LuaScriptException ex) {
+                await msg.Channel.SendMessageAsync($"```{ex.Message}```");
             } catch (Exception ex) {
                 await msg.Channel.SendMessageAsync($"```{ex.Message}\n{ex.StackTrace}```");
             }

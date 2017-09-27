@@ -37,8 +37,8 @@ namespace TehPers.Discord.TehBot {
         public Bot() {
             if (Bot.Instance != null)
                 return;
-            Bot.Instance = this;
 
+            Bot.Instance = this;
             this.Permissions = new PermissionHandler();
 
             string dbPath = Path.Combine(Directory.GetCurrentDirectory(), "data.db");
@@ -259,12 +259,28 @@ namespace TehPers.Discord.TehBot {
         }
 
         public Lua GetInterpreter() => this.GetInterpreter(null);
-        public Lua GetInterpreter(Action<object> print, uint maxPrints = 1) {
-            Lua interpreter = new Lua();
 
-            string Time(string format) => format == null ? DateTime.Now.ToString(CultureInfo.CurrentCulture) : DateTime.Now.ToString(format, CultureInfo.CurrentCulture);
+        public Lua GetInterpreter(ISocketMessageChannel channel, uint maxPrints = 1) {
+            return this.GetInterpreter(s => {
+                if (maxPrints == 0)
+                    return;
 
-            interpreter.LoadString(Resources.InterpreterInit, "init").Call((Func<string, string>) Time, print);
+                maxPrints--;
+                channel.SendMessageAsync(s).Wait();
+            });
+        }
+
+        public Lua GetInterpreter(Action<string> print) {
+            Lua interpreter = new Lua {
+                ["time"] = (Func<string, string>) (format => {
+                    if (format == null)
+                        return DateTime.Now.ToString(CultureInfo.CurrentCulture);
+                    return DateTime.Now.ToString(format, CultureInfo.CurrentCulture);
+                }),
+                ["print"] = print
+            };
+            
+            interpreter.DoString(Resources.InterpreterInit, "init");
 
             return interpreter;
         }

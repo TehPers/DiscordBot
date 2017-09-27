@@ -114,7 +114,7 @@ namespace TehPers.Discord.TehBot.Commands {
             }
 
             // Find the key with the given name
-            IEnumerable<string> matches = sheetData.Stats.Keys.Where(k => string.Equals(k, query, StringComparison.OrdinalIgnoreCase));
+            IEnumerable<string> matches = sheetData.Stats.Keys.Where(k => string.Equals(k, query, StringComparison.OrdinalIgnoreCase)).ToList();
 
             // If no matches, try to find the keys containing the string
             if (!matches.Any())
@@ -124,35 +124,24 @@ namespace TehPers.Discord.TehBot.Commands {
                 string chosen = matches.First();
                 List<string> statNamesList = sheetData.StatNames.ToList();
 
-                if (sheetData.Stats[chosen].TryGetValue("Image", out string imageLink) && !string.IsNullOrEmpty(imageLink)) {
-                    try {
-                        HttpWebRequest request = WebRequest.CreateHttp(imageLink);
-                        HttpWebResponse response = (HttpWebResponse) request.GetResponse();
-                        string filename = Path.GetFileName(request.RequestUri.AbsolutePath);
+                EmbedBuilder embed = new EmbedBuilder();
 
-                        Task.WaitAny(
-                            Task.Delay(2000),
-                            msg.Channel.SendFileAsync(response.GetResponseStream(), filename, $"{msg.Author.Mention} Stats for '{chosen}'\n" + string.Join("\n",
-                                                                                                  from kv in sheetData.Stats[chosen]
-                                                                                                  where !string.IsNullOrEmpty(kv.Value)
-                                                                                                        && kv.Key != "Image"
-                                                                                                  orderby statNamesList.IndexOf(kv.Key)
-                                                                                                  select $"{kv.Key}: {kv.Value}"))
-                        );
-                    } catch (Exception) {
-                        await msg.Channel.SendMessageAsync($"{msg.Author.Mention} Failed to find image.\n{msg.Author.Mention} Stats for '{chosen}'\n" + string.Join("\n",
-                                                               from kv in sheetData.Stats[chosen]
-                                                               where !string.IsNullOrEmpty(kv.Value)
-                                                               orderby statNamesList.IndexOf(kv.Key)
-                                                               select $"{kv.Key}: {kv.Value}"));
-                    }
-                } else {
-                    await msg.Channel.SendMessageAsync($"{msg.Author.Mention} Stats for '{chosen}'\n" + string.Join("\n",
-                                                           from kv in sheetData.Stats[chosen]
-                                                           where !string.IsNullOrEmpty(kv.Value)
-                                                           orderby statNamesList.IndexOf(kv.Key)
-                                                           select $"{kv.Key}: {kv.Value}"));
-                }
+                if (sheetData.Stats[chosen].TryGetValue("Name", out string name) && !string.IsNullOrEmpty(name))
+                    embed.WithTitle(name);
+
+                embed.WithColor(1F, 0F, 0F);
+
+                embed.WithDescription(string.Join("\n", from kv in sheetData.Stats[chosen]
+                                                        where !string.IsNullOrEmpty(kv.Value)
+                                                              && kv.Key != "Name"
+                                                              && kv.Key != "Image"
+                                                        orderby statNamesList.IndexOf(kv.Key)
+                                                        select $"{kv.Key}\n{kv.Value}"));
+
+                if (sheetData.Stats[chosen].TryGetValue("Image", out string imageLink) && !string.IsNullOrEmpty(imageLink))
+                    embed.WithImageUrl(imageLink);
+
+                await msg.Channel.SendMessageAsync(msg.Author.Mention, false, embed.Build());
             } else {
                 await msg.Channel.SendMessageAsync($"{msg.Author.Mention} No stats found for '{query}'");
             }

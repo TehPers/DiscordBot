@@ -19,7 +19,7 @@ namespace TehPers.Discord.TehBot.Commands {
 
         /// <summary>Unloads the command</summary>
         public virtual void Unload() { }
-        
+
         /// <summary>Returns whether this command should be executed</summary>
         /// <param name="msg">The message sent on the server</param>
         /// <param name="args">The arguments to the command</param>
@@ -34,14 +34,18 @@ namespace TehPers.Discord.TehBot.Commands {
         /// <summary>Displays the command's documentation asynchronously</summary>
         /// <param name="channel">The channel to send the documentation to</param>
         public virtual async Task DisplayUsage(ISocketMessageChannel channel) {
-            StringBuilder usage = new StringBuilder();
-            usage.AppendLine($"**Usage**: {Command.Prefix}{this.Name} {string.Join(" ", this.Documentation.Arguments.Select(ArgSelector))}");
-            usage.AppendLine($"**Description**: *{this.Documentation.Description}*");
-            foreach (CommandDocs.Argument arg in this.Documentation.Arguments.OrderBy(arg => arg.Optional)) {
-                usage.AppendLine($"**{arg.Name}**: {arg.Description}");
-            }
+            EmbedBuilder embed = new EmbedBuilder {
+                Color = Color.Blue,
+                Title = $"{Command.Prefix}{this.Name} {string.Join(" ", this.Documentation.Arguments.Select(ArgSelector))}",
+                Description = this.Documentation.Description,
+                Fields = this.Documentation.Arguments.Select(arg => new EmbedFieldBuilder {
+                    IsInline = false,
+                    Name = ArgSelector(arg),
+                    Value = arg.Description
+                }).ToList()
+            };
 
-            await channel.SendMessageAsync(usage.ToString());
+            await channel.SendMessageAsync("", false, embed.Build());
 
             string ArgSelector(CommandDocs.Argument arg) => $"{(arg.Optional ? "[" : "<")}{arg.Name}{(arg.Optional ? "]" : ">")}";
         }

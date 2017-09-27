@@ -13,9 +13,9 @@ namespace TehPers.Discord.TehBot.Commands {
     public class PermissionsCommand : Command {
 
         public PermissionsCommand(string name) : base(name) {
-            this.Documentation = new CommandDocs() {
+            this.Documentation = new CommandDocs {
                 Description = "Manipulates roles on a user",
-                Arguments = new List<CommandDocs.Argument>() {
+                Arguments = new List<CommandDocs.Argument> {
                     new CommandDocs.Argument("action", "[create] Creates a new role | [delete] Deletes a role | [assign] Assigns a role to a user | [unassign] Unassigns a role from a user | [entrust] Adds a permission to a role | [revoke] Removes a permission from a role | [list] Lists a user's roles"),
                     new CommandDocs.Argument("role", "role to perform the action with"),
                     new CommandDocs.Argument("arg", "user(s), parent role, or permission(s)", true)

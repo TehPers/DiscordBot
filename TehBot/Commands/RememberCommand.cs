@@ -14,9 +14,9 @@ using NLua.Exceptions;
 namespace TehPers.Discord.TehBot.Commands {
     public class RememberCommand : Command {
         public RememberCommand(string name) : base(name) {
-            this.Documentation = new CommandDocs() {
+            this.Documentation = new CommandDocs {
                 Description = "Remembers commands that can be used in the future",
-                Arguments = new List<CommandDocs.Argument>() {
+                Arguments = new List<CommandDocs.Argument> {
                     new CommandDocs.Argument("name", "Name of the command to create"),
                     new CommandDocs.Argument("-l", "Flag to execute the command through the Lua interpreter", true),
                     new CommandDocs.Argument("contents", "Contents of the command. Use %var% to grab variables from the Lua global table in non-Lua commands, and %% to escape percents.")
@@ -129,7 +129,7 @@ namespace TehPers.Discord.TehBot.Commands {
 
             public async Task ExecuteAsync(SocketMessage msg, string[] args) {
                 try {
-                    using (Lua interpreter = Bot.Instance.GetInterpreter()) {
+                    using (Lua interpreter = Bot.Instance.GetInterpreter(msg.Channel)) {
                         // Get reference to _G
                         // ReSharper disable once InconsistentNaming
                         LuaTable _G = interpreter.GetTable("_G");
@@ -137,15 +137,18 @@ namespace TehPers.Discord.TehBot.Commands {
                         // Execute command
                         if (!this.IsLua) {
                             string output = this.Contents;
-                            //output = RCommand.VarMatcher.Replace(output, match => interpreter.DoString($"return (function(...) return {match.Value.Trim('%')} end)({string.Join(", ", args)})", Name).FirstOrDefault()?.ToString() ?? "nil");
+                            // ReSharper disable once AccessToDisposedClosure
+                            //output = VarMatcher.Replace(output, match => interpreter.DoString($"return (function(...) return {match.Value.Trim('%')} end)({string.Join(", ", args)})", this.Name).FirstOrDefault()?.ToString() ?? "nil");
+                            output = VarMatcher.Replace(output, match => {
+                                return $"{{{match.Value}}}";
+                            });
                             await msg.Channel.SendMessageAsync(output);
                         } else {
-                            LuaFunction f = interpreter.LoadString(this.Contents, this.Name);
-                            f.Call(args.ToArray<object>());
+                            interpreter.LoadString(this.Contents, this.Name).Call(args.ToArray<object>());
                         }
                     }
-                } catch (LuaException ex) {
-                    await msg.Channel.SendMessageAsync($"```{ex.Message}\n{ex.StackTrace}```");
+                } catch (LuaScriptException ex) {
+                    await msg.Channel.SendMessageAsync($"```{ex.Message}```");
                 } catch (Exception ex) {
                     await msg.Channel.SendMessageAsync($"```{ex.Message}\n{ex.StackTrace}```");
                 }

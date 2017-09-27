@@ -8,8 +8,8 @@ using Discord.WebSocket;
 namespace TehPers.Discord.TehBot.Commands {
     public class HelpCommand : Command {
         public HelpCommand(string name) : base(name) {
-            this.Documentation = new CommandDocs() {
-                Arguments = new List<CommandDocs.Argument>() {
+            this.Documentation = new CommandDocs {
+                Arguments = new List<CommandDocs.Argument> {
                     new CommandDocs.Argument("command", "The command to get help with", true)
                 },
                 Description = "Provides help for commands"
