@@ -1,0 +1,5 @@
+{
+  "$type": "Bot.Commands.Command+CommandConfig, Bot",
+  "Enabled": false,
+  "Alias": null
+}
