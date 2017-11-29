@@ -1,7 +1,10 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
+﻿using System.IO;
 using CommandLine;
 using Discord;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace Bot.Commands {
     public class CommandAdmin : Command {
@@ -11,6 +14,9 @@ namespace Bot.Commands {
             this.AddVerb<CommandVerb>();
             this.AddVerb<PrefixVerb>();
             this.AddVerb<ListVerb>();
+            this.AddVerb<NickVerb>();
+            this.AddVerb<AvatarVerb>();
+            this.AddVerb<AvatarVerb>();
         }
 
         protected override bool IsDefaultEnabled { get; } = true;
@@ -56,7 +62,7 @@ namespace Bot.Commands {
                 if (cmd == null) {
                     return message.Reply($"Unknown command '{this.Cmd}'");
                 }
-                
+
                 // Modify the config
                 ConfigHandler.ConfigWrapper<CommandConfig> config = this.Global ? cmd.GetConfig() : cmd.GetConfig(server);
                 config.SetValue(c => {
@@ -74,7 +80,7 @@ namespace Bot.Commands {
                     if (this.Alias != null)
                         c.Alias = this.Alias;
                 });
-                
+
                 Bot.Instance.Save();
                 return message.Reply($"Command '{cmd.Name}' modified successfully");
             }
@@ -100,6 +106,50 @@ namespace Bot.Commands {
                 config.SetValue(c => c.Prefix = this.Prefix);
                 Bot.Instance.Save();
                 return message.Reply($"Command prefix set to '{this.Prefix}'{(this.Global ? " globally" : string.Empty)}");
+            }
+        }
+
+        [Verb("nick", HelpText = "Sets the bot's nickname on this server")]
+        public class NickVerb : Verb {
+            [Value(0, MetaName = "nickname", Required = false, HelpText = "The new nickname for the bot. Leave empty to remove the nickname")]
+            public string Nick { get; set; }
+
+            public override async Task Execute(Command cmd, IMessage message, string[] args) {
+                IGuildUser user = await message.GetGuild().GetCurrentUserAsync();
+                await user.ModifyAsync(properties => properties.Nickname = this.Nick);
+                if (this.Nick == null) {
+                    await message.Reply("Nickname removed");
+                } else {
+                    await message.Reply($"Nickname changed to '{this.Nick}'");
+                }
+            }
+        }
+
+        [Verb("avatar", HelpText = "Sets the bot's avatar")]
+        public class AvatarVerb : Verb {
+            public override Task Execute(Command cmd, IMessage message, string[] args) {
+                IAttachment attachment = message.Attachments.FirstOrDefault();
+                if (attachment == null) {
+                    return message.Reply("You must attach an image to this command");
+                } else {
+                    try {
+                        string downloadPath = Path.GetTempFileName();
+
+                        // Download the image
+                        using (WebClient client = new WebClient())
+                            client.DownloadFileTaskAsync(attachment.Url, downloadPath);
+
+                        // Create the image file
+                        Image image = new Image(downloadPath);
+
+                        // Upload the image
+                        return Bot.Instance.Client.CurrentUser.ModifyAsync(p => {
+                            p.Avatar = image;
+                        });
+                    } catch {
+                        return message.Reply("An error has occurred while downloading the image");
+                    }
+                }
             }
         }
         #endregion
