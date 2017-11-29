@@ -5,8 +5,6 @@ VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bot", "Bot\Bot.csproj", "{1F49B966-32A2-4333-B7DC-86706C7CD4CB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WFDatabase", "WFDatabase\WFDatabase.csproj", "{3DCD478F-DEA5-4D55-9F65-CC28278FDE54}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,10 +15,6 @@ Global
 		{1F49B966-32A2-4333-B7DC-86706C7CD4CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1F49B966-32A2-4333-B7DC-86706C7CD4CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1F49B966-32A2-4333-B7DC-86706C7CD4CB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3DCD478F-DEA5-4D55-9F65-CC28278FDE54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3DCD478F-DEA5-4D55-9F65-CC28278FDE54}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3DCD478F-DEA5-4D55-9F65-CC28278FDE54}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3DCD478F-DEA5-4D55-9F65-CC28278FDE54}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

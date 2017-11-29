@@ -17,6 +17,8 @@ using Newtonsoft.Json;
 namespace Bot {
     public class Bot : IDisposable {
         public static Bot Instance { get; private set; }
+        public static string ConfigsPath = Path.Combine(Directory.GetCurrentDirectory(), "Configs");
+        public static string MainConfigPath = Path.Combine(Directory.GetCurrentDirectory(), "Secret", "bot.json");
 
         public DiscordSocketClient Client { get; }
         public ConfigHandler Config { get; }
@@ -27,7 +29,7 @@ namespace Bot {
                 return;
 
             Bot.Instance = this;
-            this.Config = new ConfigHandler(Path.Combine(Directory.GetCurrentDirectory(), "Configs"));
+            this.Config = new ConfigHandler(Bot.ConfigsPath);
 
             // Setup timer
             short seconds = 0;
@@ -45,19 +47,44 @@ namespace Bot {
             this.Client.Log += this.LogAsync;
             this.Client.MessageReceived += this.MessageReceivedAsync;
             this.Client.Ready += this.ReadyAsync;
-            this.AfterLoaded += async (sender, args) => {
-                // Register commands
-                Command.RegisterCommands();
-                foreach (Command cmd in Command.CommandRegistry.Values)
-                    await cmd.Load();
+            this.AfterLoaded += this.AfterFirstLoad;
+        }
 
-                // Start ticking
-                this.SecondsTimer.Start();
-            };
+        private async void AfterFirstLoad(object sender, EventArgs args) {
+            // Register commands
+            Command.RegisterCommands();
+
+            // Load all commands
+            foreach (Command cmd in Command.CommandRegistry.Values)
+                await cmd.Load();
+
+            // Start ticking
+            this.SecondsTimer.Start();
+
+            // Don't run this function again
+            this.AfterLoaded -= this.AfterFirstLoad;
         }
 
         public async Task<bool> StartAsync() {
-            string token = "MzE5NzE3NTIzODQxMDg5NTM4.DIN5Nw.q76dD6Ei-YhCCbGtIfZeLYvUsTk";
+            // Load main config
+            BotConfig mainConfig = null;
+            try {
+                if (!File.Exists(Bot.MainConfigPath)) {
+                    mainConfig = new BotConfig();
+                    await File.WriteAllTextAsync(Bot.MainConfigPath, JsonConvert.SerializeObject(mainConfig));
+                    this.Log($"Bot config file not found. Creating new one at {Bot.MainConfigPath}. Please fill it in.");
+                    return false;
+                }
+
+                using (StreamReader file = File.OpenText(Bot.MainConfigPath)) {
+                    mainConfig = JsonConvert.DeserializeObject<BotConfig>(await file.ReadToEndAsync());
+                }
+            } catch (Exception ex) {
+                this.Log("Failed to deserialize main config file: " + Bot.MainConfigPath, LogSeverity.Error, exception: ex);
+                return false;
+            }
+
+            string token = mainConfig?.Token;
             if (string.IsNullOrEmpty(token)) {
                 this.Log($"Invalid Discord token: {token ?? "(null)"}", LogSeverity.Critical);
                 return false;
@@ -219,6 +246,10 @@ namespace Bot {
 
         public class MainConfig : IConfig {
             public string Prefix { get; set; }
+        }
+
+        private class BotConfig {
+            public string Token { get; set; }
         }
 
         public void Dispose() {

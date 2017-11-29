@@ -47,7 +47,7 @@ namespace Bot {
 
         private static bool IsRewardImportant(string type) {
             return string.Equals(type, "nitain extract", StringComparison.OrdinalIgnoreCase)
-                   || string.Equals(type, "kavat genetic codes", StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(type, "kavat genetic code", StringComparison.OrdinalIgnoreCase)
                    || string.Equals(type, "orokin catalyst", StringComparison.OrdinalIgnoreCase)
                    || string.Equals(type, "orokin catalyst blueprint", StringComparison.OrdinalIgnoreCase)
                    || string.Equals(type, "orokin reactor", StringComparison.OrdinalIgnoreCase)
