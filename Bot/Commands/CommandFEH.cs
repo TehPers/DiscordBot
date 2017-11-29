@@ -29,24 +29,30 @@ namespace Bot.Commands {
             this.AddVerb<Options>();
             this.WithDescription("Displays stats");
 
-            UserCredential credentials;
-            using (FileStream stream = new FileStream(Path.Combine(Directory.GetCurrentDirectory(), "Secret", "sheets.json"), FileMode.OpenOrCreate, FileAccess.Read)) {
-                string credPath = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-                credPath = Path.Combine(credPath, ".credentials/sheets.googleapis.com-tehbot.json");
+            string secretsFile = Path.Combine(Directory.GetCurrentDirectory(), "Secret", "sheets.json");
+            if (!File.Exists(secretsFile)) {
+                Bot.Instance.Log($"Secrets file is missing: {secretsFile}");
+            } else {
 
-                credentials = GoogleWebAuthorizationBroker.AuthorizeAsync(
-                    GoogleClientSecrets.Load(stream).Secrets,
-                    new[] { SheetsService.Scope.SpreadsheetsReadonly },
-                    "user",
-                    CancellationToken.None,
-                    new FileDataStore(credPath, true)).Result;
-                Bot.Instance.Log("Credential file saved to: " + credPath, LogSeverity.Verbose, "GOOGLE");
+                UserCredential credentials;
+                using (FileStream stream = new FileStream(secretsFile, FileMode.OpenOrCreate, FileAccess.Read)) {
+                    string credPath = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+                    credPath = Path.Combine(credPath, ".credentials/sheets.googleapis.com-tehbot.json");
+
+                    credentials = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        new[] { SheetsService.Scope.SpreadsheetsReadonly },
+                        "user",
+                        CancellationToken.None,
+                        new FileDataStore(credPath, true)).Result;
+                    Bot.Instance.Log("Credential file saved to: " + credPath, LogSeverity.Verbose, "GOOGLE");
+                }
+
+                this._service = new SheetsService(new BaseClientService.Initializer {
+                    HttpClientInitializer = credentials,
+                    ApplicationName = "Teh's Discord Bot"
+                });
             }
-
-            this._service = new SheetsService(new BaseClientService.Initializer {
-                HttpClientInitializer = credentials,
-                ApplicationName = "Teh's Discord Bot"
-            });
         }
 
         public override Task Load() {
