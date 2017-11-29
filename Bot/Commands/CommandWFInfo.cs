@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
+using Bot.Extensions;
 using CommandLine;
 using Discord;
 using WarframeNET;
@@ -91,7 +92,7 @@ namespace Bot.Commands {
                 embed.WithDescription($"{CommandWFInfo.CycleTimeLeft(now).Format()} until {(day ? "night" : "day")}");
                 embed.WithTimestamp(now - CommandWFInfo.CycleTime(now));
 
-                tasks.Add(stateChannels.SendToAll("", embed.Build()));
+                tasks.Add(stateChannels.SendToAll("", embed: embed.Build()));
             }
 
             // Alerts
@@ -117,7 +118,7 @@ namespace Bot.Commands {
                 embed.WithDescription(description.ToString());
                 embed.WithTimestamp(alert.EndTime);
 
-                tasks.Add(alertChannels.SendToAll("", embed.Build()));
+                tasks.Add(alertChannels.SendToAll("", embed: embed.Build()));
             }
 
             // Invasions
@@ -144,7 +145,7 @@ namespace Bot.Commands {
                 if (!string.Equals(invasion.AttackingFaction, "infested", StringComparison.OrdinalIgnoreCase))
                     embed.AddField(invasion.AttackingFaction, string.Join("\n", invasion.AttackerReward.ImportantRewardStrings()));
 
-                tasks.Add(invasionChannels.SendToAll("", embed.Build()));
+                tasks.Add(invasionChannels.SendToAll("", embed: embed.Build()));
             }
 
             // Do tasks

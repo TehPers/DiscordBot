@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Bot.Extensions;
 
 namespace Bot.Commands {
     public class CommandAdmin : Command {
@@ -17,6 +18,7 @@ namespace Bot.Commands {
             this.AddVerb<NickVerb>();
             this.AddVerb<AvatarVerb>();
             this.AddVerb<AvatarVerb>();
+            this.AddVerb<SpamVerb>();
         }
 
         protected override bool IsDefaultEnabled { get; } = true;
@@ -150,6 +152,38 @@ namespace Bot.Commands {
                         return message.Reply("An error has occurred while downloading the image");
                     }
                 }
+            }
+        }
+
+        [Verb("reset", HelpText = "Resets a config file")]
+        public class ResetVerb : Verb {
+            [Value(0, Required = false, MetaName = "config", HelpText = "The config to reset. If excluded, will reset every config.")]
+            public string Config { get; set; }
+
+            [Option('g', "global", Required = false, HelpText = "Modify the global config")]
+            public bool Global { get; set; }
+
+            public override Task Execute(Command cmd, IMessage message, string[] args) {
+                //ConfigHandler<IConfig> config = Bot.Instance.Config.Get<IConfig>();
+
+                return Task.CompletedTask;
+            }
+        }
+
+        [Verb("spam")]
+        public class SpamVerb : Verb {
+            public override Task Execute(Command cmd, IMessage message, string[] args) {
+                int seconds = 0;
+                IMessageChannel[] channels = {message.Channel};
+                Bot.Instance.SecondsTimer.Elapsed += async (sender, eventArgs) => {
+                    if (seconds++ < 10)
+                        return;
+
+                    seconds = 0;
+                    await channels.SendToAll("Spam");
+                };
+
+                return Task.CompletedTask;
             }
         }
         #endregion

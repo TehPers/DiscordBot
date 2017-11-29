@@ -1,25 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Bot.Commands;
 using Discord;
-using Discord.WebSocket;
 using WarframeNET;
 
-namespace Bot {
+namespace Bot.Extensions {
     public static class Extensions {
-        public static Task<IUserMessage> Reply(this IMessage msg, string reply) => msg.Channel.SendMessageAsync($"{msg.Author.Mention} {reply}");
-
-        public static Task SendToAll(this IEnumerable<IMessageChannel> channels, string message, Embed embed = null) {
-            return Task.WhenAll(channels.Select(channel => channel.SendMessageAsync(message, embed: embed)));
-        }
-
-        public static IGuild GetGuild(this IMessage msg) => msg.Channel.GetGuild();
-        public static IGuild GetGuild(this IChannel channel) => channel is IGuildChannel guildChannel ? guildChannel.Guild : null;
-
         public static string GetPrefix(this IMessage msg) => msg.Channel.GetGuild().GetPrefix();
         public static string GetPrefix(this IGuild server) => Command.GetPrefix(server);
 

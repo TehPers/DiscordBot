@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Bot.Extensions;
 using CommandLine;
 using Discord;
 

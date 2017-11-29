@@ -42,7 +42,7 @@ namespace Bot {
         }
 
         public void SymmetricExceptWith(IEnumerable<T> other) {
-            other = other.ToHashSet();
+            other = Extensions.Extensions.ToHashSet(other);
 
             HashSet<T> trimmed = new HashSet<T>(this._storage.Keys);
             trimmed.IntersectWith(other);

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bot.Extensions;
 using CommandLine;
 using Discord;
 using Google.Apis.Auth.OAuth2;
@@ -16,7 +17,7 @@ using Google.Apis.Util.Store;
 
 namespace Bot.Commands {
     public class CommandFEH : Command {
-        private const string Sheet = "1x8QcIebWWDwkjAv0smQsJEqGp_AyOc_QhPgBrdGTxaE";
+        //private static string Sheet = "1x8QcIebWWDwkjAv0smQsJEqGp_AyOc_QhPgBrdGTxaE";
         private const string ApplicationName = "Tactician Bot";
         private static readonly string[] _scopes = { SheetsService.Scope.SpreadsheetsReadonly };
         private static readonly string KeyPath = Path.Combine(Directory.GetCurrentDirectory(), "Secret", "google.json");
@@ -35,8 +36,7 @@ namespace Bot.Commands {
             // Make sure key file exists
             if (!File.Exists(CommandFEH.KeyPath)) {
                 Bot.Instance.Log($"Google service account key (JSON) not found: {CommandFEH.KeyPath}");
-            }
-            else {
+            } else {
                 // Sign into Google
                 GoogleCredential credential = GoogleCredential.FromStream(new FileStream(CommandFEH.KeyPath, FileMode.Open)).CreateScoped(CommandFEH._scopes);
 
@@ -56,9 +56,13 @@ namespace Bot.Commands {
             if (this._service == null)
                 return;
 
+            // Get global config
+            string sheetID = this.GetConfig<Storage>("sheets").GetValue(c => c.Sheet);
+            sheetID = sheetID ?? "1x8QcIebWWDwkjAv0smQsJEqGp_AyOc_QhPgBrdGTxaE";
+
             this.Sheets.Clear();
 
-            Spreadsheet spreadsheet = await this._service.Spreadsheets.Get(CommandFEH.Sheet).ExecuteAsync();
+            Spreadsheet spreadsheet = await this._service.Spreadsheets.Get(sheetID).ExecuteAsync();
             IList<Sheet> sheets = spreadsheet.Sheets;
 
             foreach (Sheet sheet in sheets) {
@@ -66,12 +70,12 @@ namespace Bot.Commands {
                 SheetData sheetData = this.Sheets.GetOrAdd(sheetName, k => new SheetData());
 
                 // Get stat names
-                ValueRange response = this._service.Spreadsheets.Values.Get(CommandFEH.Sheet, $"{sheetName}!A2:A").Execute();
+                ValueRange response = this._service.Spreadsheets.Values.Get(sheetID, $"{sheetName}!A2:A").Execute();
                 foreach (object stat in response.Values.SelectMany(row => row))
                     sheetData.StatNames.Enqueue(stat.ToString());
 
                 // Get stats
-                response = this._service.Spreadsheets.Values.Get(CommandFEH.Sheet, $"{sheetName}!A1:{sheetData.StatNames.Count + 1}").Execute();
+                response = this._service.Spreadsheets.Values.Get(sheetID, $"{sheetName}!A1:{sheetData.StatNames.Count + 1}").Execute();
                 IList<object> firstRow = response.Values.First();
                 foreach (IList<object> row in response.Values.Skip(1)) {
                     string stat = row.First().ToString();
@@ -155,17 +159,17 @@ namespace Bot.Commands {
 
                 query = query.Trim().ToLower();
 
-                string sheet = cmdFEH.Category;
-                if (sheet != null)
-                    return cmdFEH.ShowStats(message, sheet, query);
-
-                return message.Reply($"Sheet '{cmdFEH.Category}' not found.");
+                return cmdFEH.Category != null ? cmdFEH.ShowStats(message, cmdFEH.Category, query) : message.Reply($"Sheet '{cmdFEH.Category}' not found.");
             }
         }
 
         public class SheetData {
             public ConcurrentDictionary<string, ConcurrentDictionary<string, string>> Stats { get; set; } = new ConcurrentDictionary<string, ConcurrentDictionary<string, string>>();
             public ConcurrentQueue<string> StatNames { get; set; } = new ConcurrentQueue<string>();
+        }
+
+        public class Storage : IConfig {
+            public string Sheet { get; set; }
         }
     }
 }

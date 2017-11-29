@@ -46,7 +46,7 @@ namespace Bot {
         #region GetOrCreate
         private ConfigWrapper<T> InternalGetOrCreate<T>(string key, ConcurrentDictionary<string, IConfig> configs, Func<string, IConfig> createFactory, ConfigWrapper<T> parent = null) where T : IConfig {
             if (configs.GetOrAdd(key, createFactory) is T tConfig)
-                return new ConfigWrapper<T>(tConfig, this);
+                return new ConfigWrapper<T>(tConfig, this, parent);
             return null;
         }
 
@@ -62,6 +62,10 @@ namespace Bot {
             ConcurrentDictionary<string, IConfig> configs = this._serverConfigs.GetOrAdd(server, k => new ConcurrentDictionary<string, IConfig>());
             return this.InternalGetOrCreate(key, configs, createFactory, this.GetOrCreate<T>(key, createFactory));
         }
+        #endregion
+
+        #region Set
+
         #endregion
 
         #region IO
