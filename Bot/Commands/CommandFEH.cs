@@ -16,7 +16,10 @@ using Google.Apis.Util.Store;
 
 namespace Bot.Commands {
     public class CommandFEH : Command {
-        private const string SHEET = "1x8QcIebWWDwkjAv0smQsJEqGp_AyOc_QhPgBrdGTxaE";
+        private const string Sheet = "1x8QcIebWWDwkjAv0smQsJEqGp_AyOc_QhPgBrdGTxaE";
+        private const string ApplicationName = "Tactician Bot";
+        private static readonly string[] _scopes = { SheetsService.Scope.SpreadsheetsReadonly };
+        private static readonly string KeyPath = Path.Combine(Directory.GetCurrentDirectory(), "Secret", "google.json");
 
         public ConcurrentDictionary<string, SheetData> Sheets { get; set; } = new ConcurrentDictionary<string, SheetData>();
 
@@ -29,28 +32,18 @@ namespace Bot.Commands {
             this.AddVerb<Options>();
             this.WithDescription("Displays stats");
 
-            string secretsFile = Path.Combine(Directory.GetCurrentDirectory(), "Secret", "sheets.json");
-            if (!File.Exists(secretsFile)) {
-                Bot.Instance.Log($"Secrets file is missing: {secretsFile}");
-            } else {
+            // Make sure key file exists
+            if (!File.Exists(CommandFEH.KeyPath)) {
+                Bot.Instance.Log($"Google service account key (JSON) not found: {CommandFEH.KeyPath}");
+            }
+            else {
+                // Sign into Google
+                GoogleCredential credential = GoogleCredential.FromStream(new FileStream(CommandFEH.KeyPath, FileMode.Open)).CreateScoped(CommandFEH._scopes);
 
-                UserCredential credentials;
-                using (FileStream stream = new FileStream(secretsFile, FileMode.OpenOrCreate, FileAccess.Read)) {
-                    string credPath = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-                    credPath = Path.Combine(credPath, ".credentials/sheets.googleapis.com-tehbot.json");
-
-                    credentials = GoogleWebAuthorizationBroker.AuthorizeAsync(
-                        GoogleClientSecrets.Load(stream).Secrets,
-                        new[] { SheetsService.Scope.SpreadsheetsReadonly },
-                        "user",
-                        CancellationToken.None,
-                        new FileDataStore(credPath, true)).Result;
-                    Bot.Instance.Log("Credential file saved to: " + credPath, LogSeverity.Verbose, "GOOGLE");
-                }
-
+                // Attach to Google Sheets
                 this._service = new SheetsService(new BaseClientService.Initializer {
-                    HttpClientInitializer = credentials,
-                    ApplicationName = "Teh's Discord Bot"
+                    HttpClientInitializer = credential,
+                    ApplicationName = CommandFEH.ApplicationName
                 });
             }
         }
@@ -59,10 +52,13 @@ namespace Bot.Commands {
             return this.ReloadStats();
         }
 
-        public async Task<bool> ReloadStats() {
+        public async Task ReloadStats() {
+            if (this._service == null)
+                return;
+
             this.Sheets.Clear();
 
-            Spreadsheet spreadsheet = await this._service.Spreadsheets.Get(CommandFEH.SHEET).ExecuteAsync();
+            Spreadsheet spreadsheet = await this._service.Spreadsheets.Get(CommandFEH.Sheet).ExecuteAsync();
             IList<Sheet> sheets = spreadsheet.Sheets;
 
             foreach (Sheet sheet in sheets) {
@@ -70,12 +66,12 @@ namespace Bot.Commands {
                 SheetData sheetData = this.Sheets.GetOrAdd(sheetName, k => new SheetData());
 
                 // Get stat names
-                ValueRange response = this._service.Spreadsheets.Values.Get(CommandFEH.SHEET, $"{sheetName}!A2:A").Execute();
+                ValueRange response = this._service.Spreadsheets.Values.Get(CommandFEH.Sheet, $"{sheetName}!A2:A").Execute();
                 foreach (object stat in response.Values.SelectMany(row => row))
                     sheetData.StatNames.Enqueue(stat.ToString());
 
                 // Get stats
-                response = this._service.Spreadsheets.Values.Get(CommandFEH.SHEET, $"{sheetName}!A1:{sheetData.StatNames.Count + 1}").Execute();
+                response = this._service.Spreadsheets.Values.Get(CommandFEH.Sheet, $"{sheetName}!A1:{sheetData.StatNames.Count + 1}").Execute();
                 IList<object> firstRow = response.Values.First();
                 foreach (IList<object> row in response.Values.Skip(1)) {
                     string stat = row.First().ToString();
@@ -89,8 +85,6 @@ namespace Bot.Commands {
                     }
                 }
             }
-
-            return true;
         }
 
         public async Task ShowStats(IMessage msg, string sheet, string query) {
@@ -151,6 +145,8 @@ namespace Bot.Commands {
             public override Task Execute(Command cmd, IMessage message, string[] args) {
                 if (!(cmd is CommandFEH cmdFEH))
                     return Task.CompletedTask;
+                if (cmdFEH._service == null)
+                    return message.Reply("Cannot connect to Google Sheets");
 
                 string query = string.Join(" ", this.Query);
 
