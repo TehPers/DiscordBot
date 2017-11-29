@@ -47,15 +47,22 @@ namespace Bot {
             this.Client.Log += this.LogAsync;
             this.Client.MessageReceived += this.MessageReceivedAsync;
             this.Client.Ready += this.ReadyAsync;
-            this.AfterLoaded += async (sender, args) => {
-                // Register commands
-                Command.RegisterCommands();
-                foreach (Command cmd in Command.CommandRegistry.Values)
-                    await cmd.Load();
+            this.AfterLoaded += this.AfterFirstLoad;
+        }
 
-                // Start ticking
-                this.SecondsTimer.Start();
-            };
+        private async void AfterFirstLoad(object sender, EventArgs args) {
+            // Register commands
+            Command.RegisterCommands();
+
+            // Load all commands
+            foreach (Command cmd in Command.CommandRegistry.Values)
+                await cmd.Load();
+
+            // Start ticking
+            this.SecondsTimer.Start();
+
+            // Don't run this function again
+            this.AfterLoaded -= this.AfterFirstLoad;
         }
 
         public async Task<bool> StartAsync() {
