@@ -116,9 +116,10 @@ namespace Bot.Commands {
                 EmbedBuilder embed = new EmbedBuilder();
                 embed.WithTitle($"Alert - {alert.Mission.Node} - {(alert.EndTime - alert.StartTime).Format()}");
                 embed.WithDescription(description.ToString());
-                embed.WithTimestamp(alert.EndTime);
+                embed.WithFooter((alert.EndTime - alert.StartTime).Format());
+                embed.WithTimestamp(alert.StartTime);
 
-                tasks.Add(alertChannels.SendToAll("", embed: embed.Build()));
+                tasks.Add(alertChannels.SendToAll("@here", embed: embed.Build()));
             }
 
             // Invasions
@@ -145,7 +146,7 @@ namespace Bot.Commands {
                 if (!string.Equals(invasion.AttackingFaction, "infested", StringComparison.OrdinalIgnoreCase))
                     embed.AddField(invasion.AttackingFaction, string.Join("\n", invasion.AttackerReward.ImportantRewardStrings()));
 
-                tasks.Add(invasionChannels.SendToAll("", embed: embed.Build()));
+                tasks.Add(invasionChannels.SendToAll("@here", embed: embed.Build()));
             }
 
             // Do tasks
