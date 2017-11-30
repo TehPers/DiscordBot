@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using Discord;
 using Newtonsoft.Json;
 
@@ -45,9 +47,13 @@ namespace Bot {
 
         #region GetOrCreate
         private ConfigWrapper<T> InternalGetOrCreate<T>(string key, ConcurrentDictionary<string, IConfig> configs, Func<string, IConfig> createFactory, ConfigWrapper<T> parent = null) where T : IConfig {
-            if (configs.GetOrAdd(key, createFactory) is T tConfig)
-                return new ConfigWrapper<T>(tConfig, this, parent);
-            return null;
+            // Try to get existing config, or create one if there is none
+            if (configs.GetOrAdd(key, createFactory) is T curConfig)
+                return new ConfigWrapper<T>(curConfig, this, parent);
+
+            // Replace existing config
+            Bot.Instance.Log($"Overwriting config {key}");
+            return new ConfigWrapper<T>((T) configs.AddOrUpdate(key, createFactory, (s, config) => createFactory(s)), this, parent);
         }
 
         public ConfigWrapper<T> GetOrCreate<T>(string key) where T : IConfig, new() => this.GetOrCreate<T>(key, ConfigHandler.DefaultCreate<T>);
@@ -147,7 +153,20 @@ namespace Bot {
         private static void SaveConfig(string path, IConfig config) {
             lock (config) {
                 string serialized = JsonConvert.SerializeObject(config, Formatting.Indented, ConfigHandler.SerializerSettings);
-                File.WriteAllText(path, serialized);
+
+                bool success = false;
+                int tries = 0;
+                while (!success && tries++ < 10) {
+                    try {
+                        File.WriteAllText(path, serialized);
+                        success = true;
+                    } catch (IOException) {
+                        if (tries >= 10)
+                            throw;
+
+                        Thread.Sleep(100);
+                    }
+                }
             }
         }
         #endregion
@@ -209,6 +228,13 @@ namespace Bot {
                     this._handler._dirty.Add(this._config);
                     setValue(this._config);
                 }
+            }
+            #endregion
+
+            #region IO
+            public void Save() {
+                // TODO: Make the configs able to be saved individually and load them when needed (cache?)
+                Bot.Instance.Config.Save();
             }
             #endregion
         }
