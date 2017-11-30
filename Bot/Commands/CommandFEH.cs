@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Extensions;
+using Bot.Helpers;
 using CommandLine;
 using Discord;
 using Google.Apis.Auth.OAuth2;

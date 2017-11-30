@@ -2,21 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using Bot.Commands;
-using Discord;
 using WarframeNET;
 
-namespace Bot.Extensions {
-    public static class Extensions {
-        public static string GetPrefix(this IMessage msg) => msg.Channel.GetGuild().GetPrefix();
-        public static string GetPrefix(this IGuild server) => Command.GetPrefix(server);
-
-        public static HashSet<TSource> ToHashSet<TSource>(this IEnumerable<TSource> source) => new HashSet<TSource>(source);
-
+namespace Bot.Helpers
+{
+    public static class WarframeExtensions
+    {
         public static IEnumerable<string> ImportantRewardStrings(this Reward reward) {
-            IEnumerable<string> singleRewards = reward.Items.Where(Extensions.IsRewardImportant);
-            IEnumerable<string> countedRewards = reward.CountedItems.Where(item => Extensions.IsRewardImportant(item.Type)).Select(Emotes.Emotify);
+            IEnumerable<string> singleRewards = reward.Items.Where(WarframeExtensions.IsRewardImportant);
+            IEnumerable<string> countedRewards = reward.CountedItems.Where(item => WarframeExtensions.IsRewardImportant(item.Type)).Select(Emotes.Emotify);
             return singleRewards.Concat(countedRewards);
         }
 
@@ -31,7 +25,7 @@ namespace Bot.Extensions {
         }*/
 
         public static bool IsImportant(this Reward reward) {
-            return reward.Items.Any(Extensions.IsRewardImportant) || reward.CountedItems.Any(items => Extensions.IsRewardImportant(items.Type));
+            return reward.Items.Any(WarframeExtensions.IsRewardImportant) || reward.CountedItems.Any(items => WarframeExtensions.IsRewardImportant(items.Type));
         }
 
         private static bool IsRewardImportant(string type) {
@@ -53,44 +47,6 @@ namespace Bot.Extensions {
 
         public static bool IsTraderHere(this WorldState state) => state.WS_VoidTrader.StartTime >= state.Timestamp && state.WS_VoidTrader.EndTime < state.Timestamp;
 
-        public static string FixPunctuation(this string str) {
-            StringBuilder r = new StringBuilder();
-            foreach (char c in str) {
-                switch (c) {
-                    case '\u2013': // en dash
-                    case '\u2014': // em dash
-                    case '\u2015': // horizontal bar
-                        r.Append("-");
-                        break;
-                    case '\u2017': // double low line
-                        r.Append("_");
-                        break;
-                    case '\u2018': // left single quotation mark
-                    case '\u2019': // right single quotation mark
-                    case '\u201b': // single high-reversed-9 quotation mark
-                    case '\u2032': // prime
-                        r.Append("\'");
-                        break;
-                    case '\u201a': // single low-9 quotation mark
-                        r.Append(",");
-                        break;
-                    case '\u201c': // left double quotation mark
-                    case '\u201d': // right double quotation mark
-                    case '\u201e': // double low-9 quotation mark
-                    case '\u2033': // double prime
-                        r.Append("\"");
-                        break;
-                    case '\u2026': // horizontal ellipsis
-                        r.Append("...");
-                        break;
-                    default:
-                        r.Append(c);
-                        break;
-                }
-            }
-            return r.ToString();
-        }
-
         public static string Format(this TimeSpan interval) {
             StringBuilder result = new StringBuilder();
 
@@ -103,8 +59,5 @@ namespace Bot.Extensions {
 
             return result.ToString();
         }
-
-        public static string IfEmpty(this string str, string elseStr) => str == string.Empty ? elseStr : str;
-        public static string IfEmpty(this string str, Func<string, string> ifStr, string elseStr) => str == string.Empty ? elseStr : ifStr(str);
     }
 }

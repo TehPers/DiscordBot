@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using Bot.Commands;
 using Bot.Extensions;
+using Bot.Helpers;
 using Discord;
 using Discord.WebSocket;
 using Newtonsoft.Json;

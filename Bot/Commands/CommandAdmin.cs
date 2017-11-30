@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using CommandLine;
 using Discord;
 using System.Linq;
@@ -6,6 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Bot.Extensions;
+using Bot.Helpers;
 
 namespace Bot.Commands {
     public class CommandAdmin : Command {
@@ -17,8 +19,6 @@ namespace Bot.Commands {
             this.AddVerb<ListVerb>();
             this.AddVerb<NickVerb>();
             this.AddVerb<AvatarVerb>();
-            this.AddVerb<AvatarVerb>();
-            this.AddVerb<SpamVerb>();
         }
 
         protected override bool IsDefaultEnabled { get; } = true;
@@ -129,28 +129,30 @@ namespace Bot.Commands {
 
         [Verb("avatar", HelpText = "Sets the bot's avatar")]
         public class AvatarVerb : Verb {
-            public override Task Execute(Command cmd, IMessage message, string[] args) {
+            public override async Task Execute(Command cmd, IMessage message, string[] args) {
                 IAttachment attachment = message.Attachments.FirstOrDefault();
                 if (attachment == null) {
-                    return message.Reply("You must attach an image to this command");
-                } else {
-                    try {
-                        string downloadPath = Path.GetTempFileName();
+                    await message.Reply("You must attach an image to this command");
+                    return;
+                }
 
-                        // Download the image
-                        using (WebClient client = new WebClient())
-                            client.DownloadFileTaskAsync(attachment.Url, downloadPath);
+                try {
+                    string downloadPath = Path.GetTempFileName();
 
-                        // Create the image file
-                        Image image = new Image(downloadPath);
+                    // Download the image
+                    using (WebClient client = new WebClient())
+                        await client.DownloadFileTaskAsync(attachment.Url, downloadPath);
 
-                        // Upload the image
-                        return Bot.Instance.Client.CurrentUser.ModifyAsync(p => {
-                            p.Avatar = image;
-                        });
-                    } catch {
-                        return message.Reply("An error has occurred while downloading the image");
-                    }
+                    // Create the image file
+                    Image image = new Image(downloadPath);
+
+                    // Upload the image
+                    await Bot.Instance.Client.CurrentUser.ModifyAsync(p => {
+                        p.Avatar = image;
+                    });
+                } catch (Exception ex) {
+                    Bot.Instance.Log("Error while updating avatar", LogSeverity.Error, exception: ex);
+                    await message.Reply($"An error has occurred while downloading the image:```{ex.Message}```");
                 }
             }
         }
@@ -165,23 +167,6 @@ namespace Bot.Commands {
 
             public override Task Execute(Command cmd, IMessage message, string[] args) {
                 //ConfigHandler<IConfig> config = Bot.Instance.Config.Get<IConfig>();
-
-                return Task.CompletedTask;
-            }
-        }
-
-        [Verb("spam")]
-        public class SpamVerb : Verb {
-            public override Task Execute(Command cmd, IMessage message, string[] args) {
-                int seconds = 0;
-                IMessageChannel[] channels = {message.Channel};
-                Bot.Instance.SecondsTimer.Elapsed += async (sender, eventArgs) => {
-                    if (seconds++ < 10)
-                        return;
-
-                    seconds = 0;
-                    await channels.SendToAll("Spam");
-                };
 
                 return Task.CompletedTask;
             }
