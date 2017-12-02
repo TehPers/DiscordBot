@@ -19,8 +19,11 @@ using Newtonsoft.Json;
 namespace Bot {
     public class Bot : IDisposable {
         public static Bot Instance { get; private set; }
-        public static string ConfigsPath = Path.Combine(Directory.GetCurrentDirectory(), "Configs");
-        public static string MainConfigPath = Path.Combine(Directory.GetCurrentDirectory(), "Secret", "bot.json");
+        public static string RootDirectory { get; set; } = Directory.GetCurrentDirectory();
+        public static string ConfigsPath { get; } = Path.Combine(Bot.RootDirectory, "Configs");
+        public static string MainConfigPath { get; } = Path.Combine(Bot.RootDirectory, "Secret", "bot.json");
+        private static string LogPath { get; } = Path.Combine(Bot.RootDirectory, "Logs");
+        private static FileStream LogStream { get; set; }
 
         public DiscordSocketClient Client { get; }
         public ConfigHandler Config { get; }
@@ -50,6 +53,36 @@ namespace Bot {
             this.Client.MessageReceived += this.MessageReceivedAsync;
             this.Client.Ready += this.ReadyAsync;
             this.AfterLoaded += this.AfterFirstLoad;
+            this.Logged += (bot, msg) => {
+                Console.ResetColor();
+                string severity = "UNKNOWN";
+                switch (msg.Severity) {
+                    case LogSeverity.Critical:
+                        Console.BackgroundColor = ConsoleColor.White;
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        severity = "CRITICAL";
+                        break;
+                    case LogSeverity.Error:
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        severity = "ERROR";
+                        break;
+                    case LogSeverity.Warning:
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        severity = "WARNING";
+                        break;
+                    case LogSeverity.Info:
+                        severity = "INFO";
+                        break;
+                    case LogSeverity.Verbose:
+                        severity = "VERBOSE";
+                        break;
+                    case LogSeverity.Debug:
+                        severity = "DEBUG";
+                        break;
+                }
+
+                Console.WriteLine($"[{severity}] {msg.ToString()}");
+            };
         }
 
         private async void AfterFirstLoad(object sender, EventArgs args) {
@@ -116,7 +149,7 @@ namespace Bot {
             try {
                 string prefix = msg.GetPrefix();
                 if (msg.Content.StartsWith(prefix)) {
-                    await this.CommandHandlerAsync(msg);
+                    await this.CommandHandlerAsync(msg).ConfigureAwait(false);
                 }
             } catch (Exception ex) {
                 this.Log("An error occured while handing a message", LogSeverity.Error, exception: ex);
@@ -130,7 +163,7 @@ namespace Bot {
         }
 
         public void Log(string message, LogSeverity severity = LogSeverity.Info, string source = "BOT", Exception exception = null) => this.Log(new LogMessage(severity, source, message, exception));
-        public void Log(LogMessage msg) => Console.WriteLine(msg.ToString());
+        public void Log(LogMessage msg) => this.OnLogged(msg);
 
         private Task ReadyAsync() {
             this.Load();
@@ -161,16 +194,14 @@ namespace Bot {
                 } else if (c == '"' && quoted) {
                     quoted = false;
                     done = true;
-                } else if (quoted) {
+                } else if (quoted || c != ' ') {
                     builder.Append(c);
-                } else if (c == ' ') {
+                } else {
                     if (string.IsNullOrWhiteSpace(builder.ToString())) {
                         builder.Clear();
                     } else {
                         done = true;
                     }
-                } else {
-                    builder.Append(c);
                 }
 
                 // Handle arg if done
@@ -221,8 +252,6 @@ namespace Bot {
             Command cmd = Command.AvailableCommands(msg.Channel.GetGuild(), msg.Author).FirstOrDefault(c => c.GetName(msg.Channel.GetGuild()) == cmdName);
             if (cmd != null) {
                 await cmd.Execute(msg, args);
-            } else {
-                await msg.Reply($"Unknown command '{cmdName}'");
             }
         }
         #endregion
@@ -236,14 +265,18 @@ namespace Bot {
 
         public event EventHandler AfterSaved;
         protected virtual void OnAfterSaved() => this.AfterSaved?.Invoke(this, EventArgs.Empty);
+
+        public delegate void LoggedEvent(Bot sender, LogMessage message);
+        public event LoggedEvent Logged;
+        protected virtual void OnLogged(LogMessage message) => this.Logged?.Invoke(this, message);
         #endregion
 
         #region Helpers
         public SocketChannel GetChannel(ulong id) => this.Client.GetChannel(id);
 
-        public ConfigHandler.ConfigWrapper<MainConfig> GetMainConfig() => Bot.Instance.Config.GetOrCreate<MainConfig>("bot");
-        public ConfigHandler.ConfigWrapper<MainConfig> GetMainConfig(IGuild server) => Bot.Instance.Config.GetOrCreate<MainConfig>("bot", server);
-        public ConfigHandler.ConfigWrapper<MainConfig> GetMainConfig(ulong server) => Bot.Instance.Config.GetOrCreate<MainConfig>("bot", server);
+        public ConfigHandler.ConfigWrapper<MainConfig> GetMainConfig() => this.Config.GetOrCreate<MainConfig>("bot");
+        public ConfigHandler.ConfigWrapper<MainConfig> GetMainConfig(IGuild guild) => this.Config.GetOrCreate<MainConfig>("bot", guild);
+        public ConfigHandler.ConfigWrapper<MainConfig> GetMainConfig(ulong guild) => this.Config.GetOrCreate<MainConfig>("bot", guild);
         #endregion
 
         public class MainConfig : IConfig {

@@ -67,34 +67,34 @@ namespace Bot.Commands {
             return message.Channel.SendMessageAsync($"{message.Author.Mention}", embed: this.Usage.BuildHelp(message.Channel));
         }
 
-        /// <summary>Returns whether this command is enabled in the given server</summary>
-        /// <param name="server">The server</param>
+        /// <summary>Returns whether this command is enabled in the given guild</summary>
+        /// <param name="guild">The guild</param>
         /// <returns>Whether this command is enabled</returns>
-        public bool IsEnabled(IGuild server) {
-            return this.GetConfig(server).GetValue(c => c.Enabled) ?? this.IsDefaultEnabled;
+        public bool IsEnabled(IGuild guild) {
+            return this.GetConfig(guild).GetValue(c => c.Enabled) ?? this.IsDefaultEnabled;
         }
 
         /// <summary>Whether this command is enabled by default</summary>
         protected virtual bool IsDefaultEnabled { get; } = true;
 
-        /// <summary>Returns the name of the command in the given server</summary>
-        /// <param name="server">The server</param>
+        /// <summary>Returns the name of the command in the given guild</summary>
+        /// <param name="guild">The guild</param>
         /// <returns>The name of the command</returns>
-        public string GetName(IGuild server) {
-            return this.GetConfig(server).GetValue(c => c.Alias) ?? this.Name;
+        public string GetName(IGuild guild) {
+            return this.GetConfig(guild).GetValue(c => c.Alias) ?? this.Name;
         }
 
-        /// <summary>Whether the given user has permission to use this command on the given server</summary>
-        /// <param name="server">The server</param>
+        /// <summary>Whether the given user has permission to use this command on the given guild</summary>
+        /// <param name="guild">The guild</param>
         /// <param name="user">The user</param>
         /// <returns>Whether the user has permission</returns>
-        public virtual bool HasPermission(IGuild server, IUser user) => true;
+        public virtual bool HasPermission(IGuild guild, IUser user) => true;
 
-        /// <summary>Whether the given user can use this command on the given server</summary>
-        /// <param name="server">The server</param>
+        /// <summary>Whether the given user can use this command on the given guild</summary>
+        /// <param name="guild">The guild</param>
         /// <param name="user">The user</param>
         /// <returns>True if the user can use this command, false otherwise</returns>
-        public bool CanUse(IGuild server, IUser user) => this.IsEnabled(server) && this.HasPermission(server, user);
+        public bool CanUse(IGuild guild, IUser user) => this.IsEnabled(guild) && this.HasPermission(guild, user);
 
         /// <summary>Adds a verb to the command. If it is the only verb, it will be used implicitly.</summary>
         /// <typeparam name="T">The type of the verb</typeparam>
@@ -135,18 +135,18 @@ namespace Bot.Commands {
             return Bot.Instance.Config.GetOrCreate<CommandConfig>($"command.{this.Name}");
         }
 
-        public ConfigHandler.ConfigWrapper<CommandConfig> GetConfig(IGuild server) => this.GetConfig(server.Id);
-        public ConfigHandler.ConfigWrapper<CommandConfig> GetConfig(ulong server) {
-            return Bot.Instance.Config.GetOrCreate<CommandConfig>($"command.{this.Name}", server);
+        public ConfigHandler.ConfigWrapper<CommandConfig> GetConfig(IGuild guild) => this.GetConfig(guild.Id);
+        public ConfigHandler.ConfigWrapper<CommandConfig> GetConfig(ulong guild) {
+            return Bot.Instance.Config.GetOrCreate<CommandConfig>($"command.{this.Name}", guild);
         }
         
         public ConfigHandler.ConfigWrapper<T> GetConfig<T>(string name) where T : IConfig, new() {
             return Bot.Instance.Config.GetOrCreate<T>($"command.{this.Name}.{name}");
         }
 
-        public ConfigHandler.ConfigWrapper<T> GetConfig<T>(string name, IGuild server) where T : IConfig, new() => this.GetConfig<T>(name, server.Id);
-        public ConfigHandler.ConfigWrapper<T> GetConfig<T>(string name, ulong server) where T : IConfig, new() {
-            return Bot.Instance.Config.GetOrCreate<T>($"command.{this.Name}.{name}", server);
+        public ConfigHandler.ConfigWrapper<T> GetConfig<T>(string name, IGuild guild) where T : IConfig, new() => this.GetConfig<T>(name, guild.Id);
+        public ConfigHandler.ConfigWrapper<T> GetConfig<T>(string name, ulong guild) where T : IConfig, new() {
+            return Bot.Instance.Config.GetOrCreate<T>($"command.{this.Name}.{name}", guild);
         }
 
         public class CommandConfig : IConfig {
@@ -182,31 +182,31 @@ namespace Bot.Commands {
             Command.RegisterCommand(new CommandFEH("weapons", "weapons"));
         }
 
-        /// <summary>Gets all the commands usable on the given server by the given user</summary>
-        /// <param name="server">The server</param>
+        /// <summary>Gets all the commands usable on the given guild by the given user</summary>
+        /// <param name="guild">The guild</param>
         /// <param name="user">The user</param>
         /// <returns>The available commands</returns>
-        public static IEnumerable<Command> AvailableCommands(IGuild server, IUser user) => Command.CommandRegistry.Values.Where(c => c.CanUse(server, user));
+        public static IEnumerable<Command> AvailableCommands(IGuild guild, IUser user) => Command.CommandRegistry.Values.Where(c => c.CanUse(guild, user));
 
-        /// <summary>Gets all the commands enabled on the given server</summary>
-        /// <param name="server">The server</param>
+        /// <summary>Gets all the commands enabled on the given guild</summary>
+        /// <param name="guild">The guild</param>
         /// <returns>The enabled commands</returns>
-        public static IEnumerable<Command> AvailableCommands(IGuild server) => Command.CommandRegistry.Values.Where(c => c.IsEnabled(server));
+        public static IEnumerable<Command> AvailableCommands(IGuild guild) => Command.CommandRegistry.Values.Where(c => c.IsEnabled(guild));
 
         /// <summary>Gets all the commands</summary>
         /// <returns>All registered commands</returns>
         public static IEnumerable<Command> AvailableCommands() => Command.CommandRegistry.Values;
 
-        /// <summary>Gets a command on the server using its local name</summary>
-        /// <param name="server">The server</param>
+        /// <summary>Gets a command on the guild using its local name</summary>
+        /// <param name="guild">The guild</param>
         /// <param name="name">The name of the command</param>
         /// <returns>The command if found, else null</returns>
-        public static Command GetCommand(IGuild server, string name) => Command.CommandRegistry.Values.FirstOrDefault(c => string.Equals(c.GetName(server), name, StringComparison.OrdinalIgnoreCase));
+        public static Command GetCommand(IGuild guild, string name) => Command.CommandRegistry.Values.FirstOrDefault(c => string.Equals(c.GetName(guild), name, StringComparison.OrdinalIgnoreCase));
 
-        /// <summary>Returns the prefix for the given server, or the global one if not set</summary>
-        /// <param name="server">The server</param>
-        /// <returns>The prefix on the given server, or global prefix if none set</returns>
-        public static string GetPrefix(IGuild server) => Bot.Instance.GetMainConfig(server).GetValue(c => c.Prefix) ?? "!";
+        /// <summary>Returns the prefix for the given guild, or the global one if not set</summary>
+        /// <param name="guild">The guild</param>
+        /// <returns>The prefix on the given guild, or global prefix if none set</returns>
+        public static string GetPrefix(IGuild guild) => Bot.Instance.GetMainConfig(guild).GetValue(c => c.Prefix) ?? "!";
         #endregion
     }
 }

@@ -6,16 +6,16 @@ using WarframeNET;
 
 namespace Bot {
     public static class Emotes {
-        public const string WFLotus = "<:WFLotus:380292389534826498>";
-        public const string WFCredits = "<:WFCredits:380292390226886657>";
-        public const string WFPlatinum = "<:WFPlatinum:380292389798936579>";
-        public const string WFEndo = "<:WFEndo:380292389836947458>";
-        public const string WFCatalyst = "<:WFCatalyst:380292389446615042>";
-        public const string WFReactor = "<:WFReactor:380292389882953729>";
-        public const string WFForma = "<:WFForma:380292389836947457>";
-        public const string WFExilus = "<:WFExilus:380292390998638592>";
-        public const string WFGrineer = "<:WFGrineer:384570820191584256>";
-        public const string WFCorpus = "<:WFCorpus:384571252343308288>";
+        public static string WFLotus { get; } = "<:WFLotus:380292389534826498>";
+        public static string WFCredits { get; } = "<:WFCredits:380292390226886657>";
+        public static string WFPlatinum { get; } = "<:WFPlatinum:380292389798936579>";
+        public static string WFEndo { get; } = "<:WFEndo:380292389836947458>";
+        public static string WFCatalyst { get; } = "<:WFCatalyst:380292389446615042>";
+        public static string WFReactor { get; } = "<:WFReactor:380292389882953729>";
+        public static string WFForma { get; } = "<:WFForma:380292389836947457>";
+        public static string WFExilus { get; } = "<:WFExilus:380292390998638592>";
+        public static string WFGrineer { get; } = "<:WFGrineer:384570820191584256>";
+        public static string WFCorpus { get; } = "<:WFCorpus:384571252343308288>";
 
         public static string Emotify(CountedItem item) {
             (string emote, bool currency)? emote = Emotes.EmotifyRaw(item.Type);

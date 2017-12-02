@@ -23,7 +23,7 @@ namespace Bot.Commands {
 
         protected override bool IsDefaultEnabled { get; } = true;
 
-        public override bool HasPermission(IGuild server, IUser user) {
+        public override bool HasPermission(IGuild guild, IUser user) {
             return user.Id == 247080708454088705UL;
         }
 
@@ -57,16 +57,16 @@ namespace Bot.Commands {
             public string Cmd { get; set; }
 
             public override Task Execute(Command adminCmd, IMessage message, string[] args) {
-                IGuild server = message.Channel.GetGuild();
+                IGuild guild = message.Channel.GetGuild();
 
                 // Get the command
-                Command cmd = Command.GetCommand(server, this.Cmd);
+                Command cmd = Command.GetCommand(guild, this.Cmd);
                 if (cmd == null) {
                     return message.Reply($"Unknown command '{this.Cmd}'");
                 }
 
                 // Modify the config
-                ConfigHandler.ConfigWrapper<CommandConfig> config = this.Global ? cmd.GetConfig() : cmd.GetConfig(server);
+                ConfigHandler.ConfigWrapper<CommandConfig> config = this.Global ? cmd.GetConfig() : cmd.GetConfig(guild);
                 config.SetValue(c => {
                     // Enabled
                     if (this.Disable != this.Enable) {
@@ -111,7 +111,7 @@ namespace Bot.Commands {
             }
         }
 
-        [Verb("nick", HelpText = "Sets the bot's nickname on this server")]
+        [Verb("nick", HelpText = "Sets the bot's nickname on this guild")]
         public class NickVerb : Verb {
             [Value(0, MetaName = "nickname", Required = false, HelpText = "The new nickname for the bot. Leave empty to remove the nickname")]
             public string Nick { get; set; }

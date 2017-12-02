@@ -16,11 +16,11 @@ namespace Bot {
         };
 
         private readonly ConcurrentDictionary<string, IConfig> _globalConfigs = new ConcurrentDictionary<string, IConfig>();
-        private readonly ConcurrentDictionary<ulong, ConcurrentDictionary<string, IConfig>> _serverConfigs = new ConcurrentDictionary<ulong, ConcurrentDictionary<string, IConfig>>();
+        private readonly ConcurrentDictionary<ulong, ConcurrentDictionary<string, IConfig>> _guildConfigs = new ConcurrentDictionary<ulong, ConcurrentDictionary<string, IConfig>>();
 
         private readonly string _directory;
         private string GlobalDirectory => Path.Combine(this._directory, "global");
-        private string ServerDirectory => Path.Combine(this._directory, "servers");
+        private string GuildDirectory => Path.Combine(this._directory, "servers");
         private readonly object _ioLock = new object();
         private readonly ConcurrentSet<IConfig> _dirty = new ConcurrentSet<IConfig>();
 
@@ -39,9 +39,9 @@ namespace Bot {
             return this.InternalGet<T>(key, this._globalConfigs, null);
         }
 
-        public ConfigWrapper<T> Get<T>(string key, IGuild server) where T : IConfig => this.Get<T>(key, server.Id);
-        public ConfigWrapper<T> Get<T>(string key, ulong server) where T : IConfig {
-            return this._serverConfigs.TryGetValue(server, out ConcurrentDictionary<string, IConfig> configs) ? this.InternalGet(key, configs, this.Get<T>(key)) : null;
+        public ConfigWrapper<T> Get<T>(string key, IGuild guild) where T : IConfig => this.Get<T>(key, guild.Id);
+        public ConfigWrapper<T> Get<T>(string key, ulong guild) where T : IConfig {
+            return this._guildConfigs.TryGetValue(guild, out ConcurrentDictionary<string, IConfig> configs) ? this.InternalGet(key, configs, this.Get<T>(key)) : null;
         }
         #endregion
 
@@ -61,11 +61,11 @@ namespace Bot {
             return this.InternalGetOrCreate<T>(key, this._globalConfigs, createFactory);
         }
 
-        public ConfigWrapper<T> GetOrCreate<T>(string key, IGuild server) where T : IConfig, new() => this.GetOrCreate<T>(key, server.Id);
-        public ConfigWrapper<T> GetOrCreate<T>(string key, ulong server) where T : IConfig, new() => this.GetOrCreate<T>(key, server, ConfigHandler.DefaultCreate<T>);
-        public ConfigWrapper<T> GetOrCreate<T>(string key, IGuild server, Func<string, IConfig> createFactory) where T : IConfig => this.GetOrCreate<T>(key, server.Id, createFactory);
-        public ConfigWrapper<T> GetOrCreate<T>(string key, ulong server, Func<string, IConfig> createFactory) where T : IConfig {
-            ConcurrentDictionary<string, IConfig> configs = this._serverConfigs.GetOrAdd(server, k => new ConcurrentDictionary<string, IConfig>());
+        public ConfigWrapper<T> GetOrCreate<T>(string key, IGuild guild) where T : IConfig, new() => this.GetOrCreate<T>(key, guild.Id);
+        public ConfigWrapper<T> GetOrCreate<T>(string key, ulong guild) where T : IConfig, new() => this.GetOrCreate<T>(key, guild, ConfigHandler.DefaultCreate<T>);
+        public ConfigWrapper<T> GetOrCreate<T>(string key, IGuild guild, Func<string, IConfig> createFactory) where T : IConfig => this.GetOrCreate<T>(key, guild.Id, createFactory);
+        public ConfigWrapper<T> GetOrCreate<T>(string key, ulong guild, Func<string, IConfig> createFactory) where T : IConfig {
+            ConcurrentDictionary<string, IConfig> configs = this._guildConfigs.GetOrAdd(guild, k => new ConcurrentDictionary<string, IConfig>());
             return this.InternalGetOrCreate(key, configs, createFactory, this.GetOrCreate<T>(key, createFactory));
         }
         #endregion
@@ -78,7 +78,7 @@ namespace Bot {
         public void Load() {
             this._dirty.Clear();
             this._globalConfigs.Clear();
-            this._serverConfigs.Clear();
+            this._guildConfigs.Clear();
 
             lock (this._ioLock) {
                 string globalDir = this.GlobalDirectory;
@@ -98,27 +98,27 @@ namespace Bot {
                     }
                 }
 
-                // Try to load server configs
-                string serversDir = this.ServerDirectory;
-                if (Directory.Exists(serversDir)) {
-                    foreach (string serverDir in Directory.EnumerateDirectories(serversDir)) {
-                        // Get server ID
-                        if (!ulong.TryParse(Path.GetFileName(serverDir), out ulong server)) {
-                            Bot.Instance.Log($"Invalid server config directory, expected <server_id>: {serverDir}", LogSeverity.Error);
+                // Try to load guild configs
+                string guildDirs = this.GuildDirectory;
+                if (Directory.Exists(guildDirs)) {
+                    foreach (string guildDir in Directory.EnumerateDirectories(guildDirs)) {
+                        // Get guild ID
+                        if (!ulong.TryParse(Path.GetFileName(guildDir), out ulong guild)) {
+                            Bot.Instance.Log($"Invalid guild config directory, expected <guild_id>: {guildDir}", LogSeverity.Error);
                             continue;
                         }
 
-                        // Try to load the server configs
-                        ConcurrentDictionary<string, IConfig> serverConfigs = this._serverConfigs.GetOrAdd(server, k => new ConcurrentDictionary<string, IConfig>());
-                        foreach (string configPath in Directory.EnumerateFiles(serverDir)) {
+                        // Try to load the guild configs
+                        ConcurrentDictionary<string, IConfig> guildConfigs = this._guildConfigs.GetOrAdd(guild, k => new ConcurrentDictionary<string, IConfig>());
+                        foreach (string configPath in Directory.EnumerateFiles(guildDir)) {
                             string key = Path.GetFileNameWithoutExtension(configPath);
 
                             using (StreamReader file = File.OpenText(configPath)) {
                                 try {
                                     IConfig config = JsonConvert.DeserializeObject<IConfig>(file.ReadToEnd(), ConfigHandler.SerializerSettings);
-                                    serverConfigs.AddOrUpdate(key, config, (k, v) => config);
+                                    guildConfigs.AddOrUpdate(key, config, (k, v) => config);
                                 } catch {
-                                    Bot.Instance.Log($"Failed to load config {key} for server {server}", LogSeverity.Error);
+                                    Bot.Instance.Log($"Failed to load config {key} for guild {guild}", LogSeverity.Error);
                                 }
                             }
                         }
@@ -137,10 +137,10 @@ namespace Bot {
                     ConfigHandler.SaveConfig(Path.Combine(this.GlobalDirectory, $"{configKV.Key}.json"), configKV.Value);
                 }
 
-                // Write server configs
-                foreach (KeyValuePair<ulong, ConcurrentDictionary<string, IConfig>> configsKV in this._serverConfigs) {
+                // Write guild configs
+                foreach (KeyValuePair<ulong, ConcurrentDictionary<string, IConfig>> configsKV in this._guildConfigs) {
                     // Make sure directory exists
-                    string dir = Path.Combine(this.ServerDirectory, configsKV.Key.ToString());
+                    string dir = Path.Combine(this.GuildDirectory, configsKV.Key.ToString());
                     Directory.CreateDirectory(dir);
 
                     foreach (KeyValuePair<string, IConfig> configKV in configsKV.Value) {
@@ -191,42 +191,42 @@ namespace Bot {
             #region Getters
             /// <summary>Gets a value from the config without checking parent configs</summary>
             /// <typeparam name="T">The type of value to get</typeparam>
-            /// <param name="getValue">A function that returns the value from the config</param>
-            /// <returns>The value returned from <see cref="getValue"/></returns>
-            public T GetValueRaw<T>(Func<TConfig, T> getValue) {
+            /// <param name="getter">A function that returns the value from the config</param>
+            /// <returns>The value returned from <see cref="getter"/></returns>
+            public T GetValueRaw<T>(Func<TConfig, T> getter) {
                 lock (this._config) {
-                    return getValue(this._config);
+                    return getter(this._config);
                 }
             }
 
             /// <summary>Gets a value from the config, or parent config if null</summary>
             /// <typeparam name="T">The type of value to get</typeparam>
-            /// <param name="getValue">A function that returns the value from the config</param>
-            /// <returns>The value returned from <see cref="getValue"/></returns>
-            public T GetValue<T>(Func<TConfig, T> getValue) where T : class {
+            /// <param name="getter">A function that returns the value from the config</param>
+            /// <returns>The value returned from <see cref="getter"/></returns>
+            public T GetValue<T>(Func<TConfig, T> getter) where T : class {
                 lock (this._config) {
-                    return getValue(this._config) ?? this._parent?.GetValue(getValue);
+                    return getter(this._config) ?? this._parent?.GetValue(getter);
                 }
             }
 
             /// <summary>Gets a value from the config, or parent config if null</summary>
             /// <typeparam name="T">The type of value to get</typeparam>
-            /// <param name="getValue">A function that returns the value from the config</param>
-            /// <returns>The value returned from <see cref="getValue"/></returns>
-            public T? GetValue<T>(Func<TConfig, T?> getValue) where T : struct {
+            /// <param name="getter">A function that returns the value from the config</param>
+            /// <returns>The value returned from <see cref="getter"/></returns>
+            public T? GetValue<T>(Func<TConfig, T?> getter) where T : struct {
                 lock (this._config) {
-                    return getValue(this._config) ?? this._parent?.GetValue(getValue);
+                    return getter(this._config) ?? this._parent?.GetValue(getter);
                 }
             }
             #endregion
 
             #region Setters
             /// <summary>Sets values in this config</summary>
-            /// <param name="setValue">A function that sets values or performs operations on the config</param>
-            public void SetValue(Action<TConfig> setValue) {
+            /// <param name="setter">A function that sets values or performs operations on the config</param>
+            public void SetValue(Action<TConfig> setter) {
                 lock (this._config) {
                     this._handler._dirty.Add(this._config);
-                    setValue(this._config);
+                    setter(this._config);
                 }
             }
             #endregion

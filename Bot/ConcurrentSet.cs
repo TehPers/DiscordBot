@@ -20,7 +20,7 @@ namespace Bot {
 
         IEnumerator IEnumerable.GetEnumerator() => this._storage.Keys.GetEnumerator();
 
-        public void Add(T item) => (this as ISet<T>).Add(item == null ? throw new ArgumentNullException(nameof(item)) : item);
+        public void Add(T item) => (this as ISet<T>).Add(item);
 
         public void UnionWith(IEnumerable<T> other) {
             foreach (T element in other)

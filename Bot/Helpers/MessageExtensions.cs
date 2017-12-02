@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
+using Discord.Net;
 
 namespace Bot.Helpers {
     public static class MessageExtensions {
@@ -18,7 +20,11 @@ namespace Bot.Helpers {
             IUser user = await channel.GetUserAsync(Bot.Instance.Client.CurrentUser.Id, options: options);
 
             // Send the message
-            return user == null ? null : await channel.SendMessageAsync(text, isTTS, embed, options);
+            try {
+                return user == null ? null : await channel.SendMessageAsync(text, isTTS, embed, options);
+            } catch (HttpException ex) {
+                throw new UserMessageException(text, isTTS, embed, options, ex);
+            }
         }
 
         public static IGuild GetGuild(this IMessage msg) => msg.Channel.GetGuild();
@@ -67,6 +73,20 @@ namespace Bot.Helpers {
                 IconUrl = footer.IconUrl,
                 Text = footer.Text
             };
+        }
+
+        public class UserMessageException : Exception {
+            public string Content { get; }
+            public bool IsTTS { get; }
+            public Embed Embed { get; }
+            public RequestOptions Options { get; }
+
+            public UserMessageException(string content, bool isTTS = false, Embed embed = null, RequestOptions options = null, Exception innerException = null) : base($"A message failed to send: {content}", innerException) {
+                this.Content = content;
+                this.IsTTS = isTTS;
+                this.Embed = embed;
+                this.Options = options;
+            }
         }
     }
 }

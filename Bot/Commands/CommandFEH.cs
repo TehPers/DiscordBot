@@ -21,7 +21,7 @@ namespace Bot.Commands {
         //private static string Sheet = "1x8QcIebWWDwkjAv0smQsJEqGp_AyOc_QhPgBrdGTxaE";
         private const string ApplicationName = "Tactician Bot";
         private static readonly string[] _scopes = { SheetsService.Scope.SpreadsheetsReadonly };
-        private static readonly string KeyPath = Path.Combine(Directory.GetCurrentDirectory(), "Secret", "google.json");
+        private static readonly string KeyPath = Path.Combine(Bot.RootDirectory, "Secret", "google.json");
 
         public ConcurrentDictionary<string, SheetData> Sheets { get; set; } = new ConcurrentDictionary<string, SheetData>();
 

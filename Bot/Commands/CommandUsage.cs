@@ -31,7 +31,7 @@ namespace Bot.Commands {
         }
 
         public Embed BuildHelp(IChannel channel) => this.BuildHelp(channel.GetGuild());
-        public Embed BuildHelp(IGuild server) => this.BuildHelp(Command.GetPrefix(server), this._command.GetName(server));
+        public Embed BuildHelp(IGuild guild) => this.BuildHelp(Command.GetPrefix(guild), this._command.GetName(guild));
         public Embed BuildHelp(string prefix, string commandName) {
             EmbedBuilder embed = new EmbedBuilder();
             embed.WithTitle($"Command Help: {prefix}{commandName}");

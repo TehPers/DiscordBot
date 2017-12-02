@@ -11,7 +11,7 @@ using WarframeNET;
 namespace Bot.Extensions {
     public static class Extensions {
         public static string GetPrefix(this IMessage msg) => msg.Channel.GetGuild().GetPrefix();
-        public static string GetPrefix(this IGuild server) => Command.GetPrefix(server);
+        public static string GetPrefix(this IGuild guild) => Command.GetPrefix(guild);
 
         public static HashSet<TSource> ToHashSet<TSource>(this IEnumerable<TSource> source) => new HashSet<TSource>(source);
         

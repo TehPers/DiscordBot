@@ -16,7 +16,7 @@ using WarframeNET;
 
 namespace Bot.Commands {
     public class CommandWFInfo : Command {
-        public static string TrackedPlatform = Platform.PC;
+        public static string TrackedPlatform { get; } = Platform.PC;
         private const string ConfigName = "tracked";
 
         private static readonly TimeSpan HistoryLength = new TimeSpan(days: 3, hours: 0, minutes: 0, seconds: 0);

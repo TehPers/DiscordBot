@@ -19,7 +19,7 @@ namespace Bot
 
         public Task ConsoleHandler()
         {
-            while (Program.Running)
+            while (this.Running)
             {
                 string input = Console.ReadLine();
                 if (input == null)
@@ -33,7 +33,7 @@ namespace Bot
                 switch (cmd)
                 {
                     case "exit":
-                        Program.Running = false;
+                        this.Running = false;
                         break;
                     case "help":
                         Console.WriteLine("Type 'exit' to exit");
@@ -46,6 +46,6 @@ namespace Bot
             return Task.CompletedTask;
         }
 
-        public static bool Running = true;
+        public bool Running = true;
     }
 }
