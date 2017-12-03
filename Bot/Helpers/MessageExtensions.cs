@@ -11,11 +11,17 @@ namespace Bot.Helpers {
             return msg.Channel.SendMessageSafe($"{msg.Author.Mention} {reply}");
         }
 
-        public static Task<IUserMessage[]> SendToAll(this IEnumerable<IMessageChannel> channels, string text, bool isTTS = false, Embed embed = null, RequestOptions options = null) {
-            return Task.WhenAll(channels.Select(channel => channel.SendMessageSafe(text, isTTS, embed, options)));
+        public static Task<IUserMessage[]> SendToAll(this IEnumerable<IMessageChannel> channels, string text) => channels.SendToAll(text, null, null, false);
+        public static Task<IUserMessage[]> SendToAll(this IEnumerable<IMessageChannel> channels, string text, Embed embed) => channels.SendToAll(text, embed, null, false);
+        public static Task<IUserMessage[]> SendToAll(this IEnumerable<IMessageChannel> channels, string text, Embed embed, RequestOptions options) => channels.SendToAll(text, embed, options, false);
+        public static Task<IUserMessage[]> SendToAll(this IEnumerable<IMessageChannel> channels, string text, Embed embed, RequestOptions options, bool isTTS) {
+            return Task.WhenAll(channels.Select(channel => channel.SendMessageSafe(text, embed, options, isTTS)));
         }
 
-        public static async Task<IUserMessage> SendMessageSafe(this IMessageChannel channel, string text, bool isTTS = false, Embed embed = null, RequestOptions options = null) {
+        public static Task<IUserMessage> SendMessageSafe(this IMessageChannel channel, string text) => channel.SendMessageSafe(text, null, null, false);
+        public static Task<IUserMessage> SendMessageSafe(this IMessageChannel channel, string text, Embed embed) => channel.SendMessageSafe(text, embed, null, false);
+        public static Task<IUserMessage> SendMessageSafe(this IMessageChannel channel, string text, Embed embed, RequestOptions options) => channel.SendMessageSafe(text, embed, options, false);
+        public static async Task<IUserMessage> SendMessageSafe(this IMessageChannel channel, string text, Embed embed, RequestOptions options, bool isTTS) {
             // Make sure the bot is in this channel
             IUser user = await channel.GetUserAsync(Bot.Instance.Client.CurrentUser.Id, options: options);
 

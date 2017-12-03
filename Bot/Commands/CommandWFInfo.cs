@@ -54,21 +54,17 @@ namespace Bot.Commands {
             this._day = CommandWFInfo.IsDay(DateTime.UtcNow);
 
             // Start tracking
-            Bot.Instance.SecondsTimer.Elapsed += this.Update;
+            Bot.Instance.SecondsTimer.Elapsed += this.UpdateMessages;
         }
 
         public override Task Unload() {
             // Stop tracking
-            Bot.Instance.SecondsTimer.Elapsed -= this.Update;
+            Bot.Instance.SecondsTimer.Elapsed -= this.UpdateMessages;
 
             return base.Unload();
         }
-
-        private async void Update(object sender, ElapsedEventArgs elapsedEventArgs) {
-            await this.UpdateMessages();
-        }
-
-        private Task UpdateMessages() {
+        
+        private async void UpdateMessages(object sender, ElapsedEventArgs elapsedEventArgs) {
             this._secondsElapsed++;
 
             List<Task> tasks = new List<Task>();
@@ -79,7 +75,7 @@ namespace Bot.Commands {
             if (this._secondsElapsed % CommandWFInfo.InvasionsUpdateRate == 0)
                 tasks.Add(this.UpdateInvasions());
 
-            return Task.WhenAll(tasks);
+            await Task.WhenAll(tasks);
         }
 
         private async Task UpdateCetus() {
