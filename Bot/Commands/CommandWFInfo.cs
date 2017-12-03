@@ -137,7 +137,7 @@ namespace Bot.Commands {
                 }));
             }
 
-            config.Save();
+            await config.Save();
         }
 
         private async Task UpdateAlerts() {
@@ -207,7 +207,7 @@ namespace Bot.Commands {
                 }));
             }
 
-            config.Save();
+            await config.Save();
         }
 
         private async Task UpdateInvasions() {
@@ -286,7 +286,7 @@ namespace Bot.Commands {
                 }));
             }
 
-            config.Save();
+            await config.Save();
         }
 
         private async Task<WorldState> GetWorldState() {
@@ -368,20 +368,21 @@ namespace Bot.Commands {
             [Value(0, Required = false, MetaName = "body", HelpText = "Contents of the message (before the embed)")]
             public string Body { get; set; }
 
-            public override Task Execute(Command cmd, IMessage message, string[] args) {
+            public override async Task Execute(Command cmd, IMessage message, string[] args) {
                 Task task = Task.CompletedTask;
-                cmd.GetConfig<Storage>(CommandWFInfo.ConfigName).SetValue(config => {
-                    if (!config.CetusChannels.ContainsKey(message.Channel.Id)) {
-                        config.CetusChannels.Add(message.Channel.Id, this.Body);
+                ConfigHandler.ConfigWrapper<Storage> config = cmd.GetConfig<Storage>(CommandWFInfo.ConfigName).SetValue(c => {
+                    if (!c.CetusChannels.ContainsKey(message.Channel.Id)) {
+                        c.CetusChannels.Add(message.Channel.Id, this.Body);
                         task = message.Reply("World state will now be tracked in this channel.");
-                    } else if (config.CetusChannels.Remove(message.Channel.Id)) {
+                    } else if (c.CetusChannels.Remove(message.Channel.Id)) {
                         task = message.Reply("World state will no longer be tracked in this channel.");
                     } else {
                         task = message.Reply("An error has occured.");
                     }
                 });
-                Bot.Instance.Save();
-                return task;
+
+                await task;
+                await config.Save();
             }
         }
 
@@ -390,20 +391,21 @@ namespace Bot.Commands {
             [Value(0, Required = false, MetaName = "body", HelpText = "Contents of the message (before the embed)")]
             public string Body { get; set; }
 
-            public override Task Execute(Command cmd, IMessage message, string[] args) {
+            public override async Task Execute(Command cmd, IMessage message, string[] args) {
                 Task task = Task.CompletedTask;
-                cmd.GetConfig<Storage>(CommandWFInfo.ConfigName).SetValue(config => {
-                    if (!config.AlertChannels.ContainsKey(message.Channel.Id)) {
-                        config.AlertChannels.Add(message.Channel.Id, this.Body);
+                ConfigHandler.ConfigWrapper<Storage> config = cmd.GetConfig<Storage>(CommandWFInfo.ConfigName).SetValue(c => {
+                    if (!c.AlertChannels.ContainsKey(message.Channel.Id)) {
+                        c.AlertChannels.Add(message.Channel.Id, this.Body);
                         task = message.Reply("Alerts will now be tracked in this channel.");
-                    } else if (config.AlertChannels.Remove(message.Channel.Id)) {
+                    } else if (c.AlertChannels.Remove(message.Channel.Id)) {
                         task = message.Reply("Alerts will no longer be tracked in this channel.");
                     } else {
                         task = message.Reply("An error has occured.");
                     }
                 });
-                Bot.Instance.Save();
-                return task;
+
+                await task;
+                await config.Save();
             }
         }
 
@@ -412,20 +414,21 @@ namespace Bot.Commands {
             [Value(0, Required = false, MetaName = "body", HelpText = "Contents of the message (before the embed)")]
             public string Body { get; set; }
 
-            public override Task Execute(Command cmd, IMessage message, string[] args) {
+            public override async Task Execute(Command cmd, IMessage message, string[] args) {
                 Task task = Task.CompletedTask;
-                cmd.GetConfig<Storage>(CommandWFInfo.ConfigName).SetValue(config => {
-                    if (!config.InvasionChannels.ContainsKey(message.Channel.Id)) {
-                        config.InvasionChannels.Add(message.Channel.Id, this.Body);
+                ConfigHandler.ConfigWrapper<Storage> config = cmd.GetConfig<Storage>(CommandWFInfo.ConfigName).SetValue(c => {
+                    if (!c.InvasionChannels.ContainsKey(message.Channel.Id)) {
+                        c.InvasionChannels.Add(message.Channel.Id, this.Body);
                         task = message.Reply("Invasions will now be tracked in this channel.");
-                    } else if (config.InvasionChannels.Remove(message.Channel.Id)) {
+                    } else if (c.InvasionChannels.Remove(message.Channel.Id)) {
                         task = message.Reply("Invasions will no longer be tracked in this channel.");
                     } else {
                         task = message.Reply("An error has occured.");
                     }
                 });
-                Bot.Instance.Save();
-                return task;
+
+                await task;
+                await config.Save();
             }
         }
         #endregion

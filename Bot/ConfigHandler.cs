@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
+using System.Text;
 using System.Threading.Tasks;
 using Discord;
 using Newtonsoft.Json;
@@ -22,43 +22,42 @@ namespace Bot {
         private string GlobalDirectory => Path.Combine(this._directory, "global");
         private string GuildDirectory => Path.Combine(this._directory, "servers");
         private readonly object _ioLock = new object();
-        private readonly ConcurrentSet<IConfig> _dirty = new ConcurrentSet<IConfig>();
 
         public ConfigHandler(string directory) {
             this._directory = directory;
         }
 
         #region Get
-        private ConfigWrapper<T> InternalGet<T>(string key, IReadOnlyDictionary<string, IConfig> configs, ConfigWrapper<T> parent) where T : IConfig {
+        private static ConfigWrapper<T> InternalGet<T>(string key, IReadOnlyDictionary<string, IConfig> configs, string path, ConfigWrapper<T> parent = null) where T : IConfig {
             if (configs.TryGetValue(key, out IConfig config) && config is T tConfig)
-                return new ConfigWrapper<T>(tConfig, this, parent);
+                return new ConfigWrapper<T>(tConfig, Path.Combine(path, $"{key}.json"), parent);
             return null;
         }
 
         public ConfigWrapper<T> Get<T>(string key) where T : IConfig {
-            return this.InternalGet<T>(key, this._globalConfigs, null);
+            return ConfigHandler.InternalGet<T>(key, this._globalConfigs, this.GlobalDirectory);
         }
 
         public ConfigWrapper<T> Get<T>(string key, IGuild guild) where T : IConfig => this.Get<T>(key, guild.Id);
         public ConfigWrapper<T> Get<T>(string key, ulong guild) where T : IConfig {
-            return this._guildConfigs.TryGetValue(guild, out ConcurrentDictionary<string, IConfig> configs) ? this.InternalGet(key, configs, this.Get<T>(key)) : null;
+            return this._guildConfigs.TryGetValue(guild, out ConcurrentDictionary<string, IConfig> configs) ? ConfigHandler.InternalGet(key, configs, Path.Combine(this.GuildDirectory, guild.ToString()), this.Get<T>(key)) : null;
         }
         #endregion
 
         #region GetOrCreate
-        private ConfigWrapper<T> InternalGetOrCreate<T>(string key, ConcurrentDictionary<string, IConfig> configs, Func<string, IConfig> createFactory, ConfigWrapper<T> parent = null) where T : IConfig {
+        private static ConfigWrapper<T> InternalGetOrCreate<T>(string key, ConcurrentDictionary<string, IConfig> configs, Func<string, IConfig> createFactory, string path, ConfigWrapper<T> parent = null) where T : IConfig {
             // Try to get existing config, or create one if there is none
             if (configs.GetOrAdd(key, createFactory) is T curConfig)
-                return new ConfigWrapper<T>(curConfig, this, parent);
+                return new ConfigWrapper<T>(curConfig, Path.Combine(path, $"{key}.json"), parent);
 
             // Replace existing config
-            Bot.Instance.Log($"Overwriting config {key}");
-            return new ConfigWrapper<T>((T) configs.AddOrUpdate(key, createFactory, (s, config) => createFactory(s)), this, parent);
+            Bot.Instance.Log($"Overwriting config {key}", LogSeverity.Warning);
+            return new ConfigWrapper<T>((T) configs.AddOrUpdate(key, createFactory, (s, config) => createFactory(s)), Path.Combine(path, $"{key}.json"), parent);
         }
 
         public ConfigWrapper<T> GetOrCreate<T>(string key) where T : IConfig, new() => this.GetOrCreate<T>(key, ConfigHandler.DefaultCreate<T>);
         public ConfigWrapper<T> GetOrCreate<T>(string key, Func<string, IConfig> createFactory) where T : IConfig {
-            return this.InternalGetOrCreate<T>(key, this._globalConfigs, createFactory);
+            return ConfigHandler.InternalGetOrCreate<T>(key, this._globalConfigs, createFactory, this.GlobalDirectory);
         }
 
         public ConfigWrapper<T> GetOrCreate<T>(string key, IGuild guild) where T : IConfig, new() => this.GetOrCreate<T>(key, guild.Id);
@@ -66,17 +65,33 @@ namespace Bot {
         public ConfigWrapper<T> GetOrCreate<T>(string key, IGuild guild, Func<string, IConfig> createFactory) where T : IConfig => this.GetOrCreate<T>(key, guild.Id, createFactory);
         public ConfigWrapper<T> GetOrCreate<T>(string key, ulong guild, Func<string, IConfig> createFactory) where T : IConfig {
             ConcurrentDictionary<string, IConfig> configs = this._guildConfigs.GetOrAdd(guild, k => new ConcurrentDictionary<string, IConfig>());
-            return this.InternalGetOrCreate(key, configs, createFactory, this.GetOrCreate<T>(key, createFactory));
+            return ConfigHandler.InternalGetOrCreate(key, configs, createFactory, this.GuildDirectory, this.GetOrCreate<T>(key, createFactory));
         }
         #endregion
 
-        #region Set
-
-        #endregion
-
         #region IO
+        [Obsolete]
+        public async Task Save() {
+            // Save global configs
+            foreach (string configName in this._globalConfigs.Keys) {
+                ConfigWrapper<IConfig> config = this.Get<IConfig>(configName);
+                if (config != null) {
+                    await config.Save();
+                }
+            }
+
+            // Save guild configs
+            foreach (KeyValuePair<ulong, ConcurrentDictionary<string, IConfig>> guildConfigs in this._guildConfigs) {
+                foreach (string configName in guildConfigs.Value.Keys) {
+                    ConfigWrapper<IConfig> config = this.Get<IConfig>(configName, guildConfigs.Key);
+                    if (config != null) {
+                        await config.Save();
+                    }
+                }
+            }
+        }
+
         public void Load() {
-            this._dirty.Clear();
             this._globalConfigs.Clear();
             this._guildConfigs.Clear();
 
@@ -126,49 +141,6 @@ namespace Bot {
                 }
             }
         }
-
-        public void Save() {
-            lock (this._ioLock) {
-                // Make sure directories exist
-                Directory.CreateDirectory(this.GlobalDirectory);
-
-                // Write global config
-                foreach (KeyValuePair<string, IConfig> configKV in this._globalConfigs) {
-                    ConfigHandler.SaveConfig(Path.Combine(this.GlobalDirectory, $"{configKV.Key}.json"), configKV.Value);
-                }
-
-                // Write guild configs
-                foreach (KeyValuePair<ulong, ConcurrentDictionary<string, IConfig>> configsKV in this._guildConfigs) {
-                    // Make sure directory exists
-                    string dir = Path.Combine(this.GuildDirectory, configsKV.Key.ToString());
-                    Directory.CreateDirectory(dir);
-
-                    foreach (KeyValuePair<string, IConfig> configKV in configsKV.Value) {
-                        ConfigHandler.SaveConfig(Path.Combine(dir, $"{configKV.Key}.json"), configKV.Value);
-                    }
-                }
-            }
-        }
-
-        private static void SaveConfig(string path, IConfig config) {
-            lock (config) {
-                string serialized = JsonConvert.SerializeObject(config, Formatting.Indented, ConfigHandler.SerializerSettings);
-
-                bool success = false;
-                int tries = 0;
-                while (!success && tries++ < 10) {
-                    try {
-                        File.WriteAllText(path, serialized);
-                        success = true;
-                    } catch (IOException) {
-                        if (tries >= 10)
-                            throw;
-
-                        Thread.Sleep(100);
-                    }
-                }
-            }
-        }
         #endregion
 
         #region Helpers
@@ -180,11 +152,12 @@ namespace Bot {
         public class ConfigWrapper<TConfig> where TConfig : IConfig {
             private readonly TConfig _config;
             private readonly ConfigWrapper<TConfig> _parent;
-            private readonly ConfigHandler _handler;
+            private readonly string _path;
+            private bool _dirty;
 
-            public ConfigWrapper(TConfig config, ConfigHandler handler, ConfigWrapper<TConfig> parent = null) {
+            public ConfigWrapper(TConfig config, string path, ConfigWrapper<TConfig> parent = null) {
                 this._config = config;
-                this._handler = handler;
+                this._path = path;
                 this._parent = parent;
             }
 
@@ -223,18 +196,32 @@ namespace Bot {
             #region Setters
             /// <summary>Sets values in this config</summary>
             /// <param name="setter">A function that sets values or performs operations on the config</param>
-            public void SetValue(Action<TConfig> setter) {
+            public ConfigWrapper<TConfig> SetValue(Action<TConfig> setter) {
                 lock (this._config) {
-                    this._handler._dirty.Add(this._config);
+                    this._dirty = true;
                     setter(this._config);
                 }
+
+                return this;
             }
             #endregion
 
             #region IO
-            public void Save() {
-                // TODO: Make the configs able to be saved individually and load them when needed (cache?)
-                Bot.Instance.Config.Save();
+            public async Task Save() {
+                // Don't try to save if not necessary
+                if (!this._dirty)
+                    return;
+
+                //Bot.Instance.Config.Save();
+                Directory.CreateDirectory(Path.GetDirectoryName(this._path));
+                using (FileStream stream = File.Open(this._path, FileMode.OpenOrCreate, FileAccess.Write)) {
+                    string serialized;
+                    lock (this._config)
+                        serialized = JsonConvert.SerializeObject(this._config, Formatting.Indented, ConfigHandler.SerializerSettings);
+
+                    byte[] data = Encoding.UTF8.GetBytes(serialized);
+                    await stream.WriteAsync(data, 0, data.Length);
+                }
             }
             #endregion
         }

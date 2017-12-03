@@ -43,7 +43,7 @@ namespace Bot {
                     return;
 
                 // Save every minute
-                this.Save();
+                this.Save().Wait();
                 seconds = 0;
             };
 
@@ -55,7 +55,7 @@ namespace Bot {
             this.AfterLoaded += this.AfterFirstLoad;
             this.Logged += (bot, msg) => {
                 Console.ResetColor();
-                string severity = "UNKNOWN";
+                string severity;
                 switch (msg.Severity) {
                     case LogSeverity.Critical:
                         Console.BackgroundColor = ConsoleColor.White;
@@ -79,9 +79,20 @@ namespace Bot {
                     case LogSeverity.Debug:
                         severity = "DEBUG";
                         break;
+                    default:
+                        severity = "UNKNOWN";
+                        break;
                 }
 
                 Console.WriteLine($"[{severity}] {msg.ToString()}");
+            };
+
+            // Setup log file
+            Directory.CreateDirectory(Path.GetDirectoryName(Bot.LogPath));
+            Bot.LogStream = File.OpenWrite(Bot.LogPath);
+            this.Logged += (bot, msg) => {
+                byte[] data = Encoding.UTF8.GetBytes(msg.ToString());
+                Bot.LogStream.Write(data, 0, data.Length);
             };
         }
 
@@ -102,7 +113,7 @@ namespace Bot {
 
         public async Task<bool> StartAsync() {
             // Load main config
-            BotConfig mainConfig = null;
+            BotConfig mainConfig;
             try {
                 if (!File.Exists(Bot.MainConfigPath)) {
                     mainConfig = new BotConfig();
@@ -130,9 +141,10 @@ namespace Bot {
             return true;
         }
 
-        public void Save() {
+        [Obsolete]
+        public async Task Save() {
             this.OnBeforeSaved();
-            this.Config.Save();
+            await this.Config.Save();
             this.OnAfterSaved();
         }
 
@@ -245,7 +257,7 @@ namespace Bot {
             }
 
             if (cmdName == null || failed) {
-                await msg.Reply("Failed to parse command.");
+                this.Log($"Failed to parse message: {msg.Content}", LogSeverity.Warning);
                 return;
             }
 

@@ -139,7 +139,7 @@ namespace Bot.Commands {
         public ConfigHandler.ConfigWrapper<CommandConfig> GetConfig(ulong guild) {
             return Bot.Instance.Config.GetOrCreate<CommandConfig>($"command.{this.Name}", guild);
         }
-        
+
         public ConfigHandler.ConfigWrapper<T> GetConfig<T>(string name) where T : IConfig, new() {
             return Bot.Instance.Config.GetOrCreate<T>($"command.{this.Name}.{name}");
         }
@@ -157,6 +157,9 @@ namespace Bot.Commands {
 
         public abstract class Verb {
             public abstract Task Execute(Command cmd, IMessage message, string[] args);
+
+            public virtual bool IsEnabled(IMessage message) => this.IsEnabled(message.Channel, message.Author);
+            public virtual bool IsEnabled(IChannel channel, IUser user) => true;
         }
 
         #region Static
