@@ -7,9 +7,6 @@ using Discord;
 
 namespace Bot.Helpers {
     public static class Extensions {
-        public static string GetPrefix(this IMessage msg) => msg.Channel.GetGuild().GetPrefix();
-        public static string GetPrefix(this IGuild guild) => Command.GetPrefix(guild);
-        
         public static string FixPunctuation(this string str) {
             StringBuilder r = new StringBuilder();
             foreach (char c in str) {
@@ -48,7 +45,7 @@ namespace Bot.Helpers {
             return r.ToString();
         }
 
-                public static string IfEmpty(this string str, string elseStr) => str == string.Empty ? elseStr : str;
+        public static string IfEmpty(this string str, string elseStr) => str == string.Empty ? elseStr : str;
         public static string IfEmpty(this string str, Func<string, string> ifStr, string elseStr) => str == string.Empty ? elseStr : ifStr(str);
     }
 }

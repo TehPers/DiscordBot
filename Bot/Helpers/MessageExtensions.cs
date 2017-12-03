@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bot.Commands;
 using Discord;
 using Discord.Net;
 
@@ -42,6 +43,9 @@ namespace Bot.Helpers {
         public static Task<IMessageChannel> GetMessageChannel(this IDiscordClient client, ulong id, CacheMode mode = CacheMode.AllowDownload, RequestOptions options = null) {
             return client.GetChannelAsync(id, mode, options).ContinueWith(task => task.Result as IMessageChannel);
         }
+        
+        public static string GetPrefix(this IMessage msg) => msg.Channel.GetGuild().GetPrefix();
+        public static string GetPrefix(this IGuild guild) => Command.GetPrefix(guild);
 
         public static EmbedBuilder AsBuilder(this IEmbed embed) {
             return new EmbedBuilder {
