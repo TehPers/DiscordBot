@@ -65,7 +65,7 @@ namespace Bot {
         public ConfigWrapper<T> GetOrCreate<T>(string key, IGuild guild, Func<string, IConfig> createFactory) where T : IConfig => this.GetOrCreate<T>(key, guild.Id, createFactory);
         public ConfigWrapper<T> GetOrCreate<T>(string key, ulong guild, Func<string, IConfig> createFactory) where T : IConfig {
             ConcurrentDictionary<string, IConfig> configs = this._guildConfigs.GetOrAdd(guild, k => new ConcurrentDictionary<string, IConfig>());
-            return ConfigHandler.InternalGetOrCreate(key, configs, createFactory, this.GuildDirectory, this.GetOrCreate<T>(key, createFactory));
+            return ConfigHandler.InternalGetOrCreate(key, configs, createFactory, Path.Combine(this.GuildDirectory, guild.ToString()), this.GetOrCreate<T>(key, createFactory));
         }
         #endregion
 
@@ -146,9 +146,7 @@ namespace Bot {
         #region Helpers
         public static bool IsValidKey(string key) => key.IndexOfAny(Path.GetInvalidFileNameChars()) != -1;
         #endregion
-
-        /// <summary>A temporary wrapper for configs. Do not cache objects of this type.</summary>
-        /// <typeparam name="TConfig">The type of config this wraps</typeparam>
+        
         public class ConfigWrapper<TConfig> where TConfig : IConfig {
             private readonly TConfig _config;
             private readonly ConfigWrapper<TConfig> _parent;

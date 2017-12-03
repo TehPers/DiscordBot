@@ -30,7 +30,7 @@ namespace Bot.Helpers {
             try {
                 return user == null ? null : await channel.SendMessageAsync(content, isTTS, embed, options).ConfigureAwait(false);
             } catch (HttpException ex) {
-                throw new UserMessageException(content, embed, options, ex, isTTS);
+                throw new UserMessageException(content, embed, ex, options, isTTS);
             }
         }
 

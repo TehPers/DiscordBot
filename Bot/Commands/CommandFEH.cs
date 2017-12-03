@@ -61,7 +61,7 @@ namespace Bot.Commands {
 
             this.Sheets.Clear();
 
-            Spreadsheet spreadsheet = await this._service.Spreadsheets.Get(sheetID).ExecuteAsync();
+            Spreadsheet spreadsheet = await this._service.Spreadsheets.Get(sheetID).ExecuteAsync().ConfigureAwait(false);
             IList<Sheet> sheets = spreadsheet.Sheets;
 
             foreach (Sheet sheet in sheets) {
@@ -94,7 +94,7 @@ namespace Bot.Commands {
         public async Task ShowStats(IMessage msg, string sheet, string query) {
             SheetData sheetData = this.Sheets.FirstOrDefault(kv => kv.Key.Equals(sheet, StringComparison.OrdinalIgnoreCase)).Value;
             if (sheetData == null) {
-                await msg.Channel.SendMessageAsync($"{msg.Author.Mention} Category '{sheet}' doesn't exist. Possible categories: {string.Join(", ", this.Sheets.Select(kv => $"{kv.Key}"))}");
+                await msg.Channel.SendMessageAsync($"{msg.Author.Mention} Category '{sheet}' doesn't exist. Possible categories: {string.Join(", ", this.Sheets.Select(kv => $"{kv.Key}"))}").ConfigureAwait(false);
                 return;
             }
 
@@ -132,13 +132,13 @@ namespace Bot.Commands {
 
                 // Image
                 if (sheetData.Stats[chosen].TryGetValue("Image", out string imageLink) && !string.IsNullOrEmpty(imageLink))
-                    embed.WithImageUrl(imageLink);
+                    embed.WithThumbnailUrl(imageLink);
 
                 // Send
-                await msg.Channel.SendMessageAsync(msg.Author.Mention, false, embed.Build());
+                await msg.Channel.SendMessageAsync(msg.Author.Mention, false, embed.Build()).ConfigureAwait(false);
 
             } else {
-                await msg.Channel.SendMessageAsync($"{msg.Author.Mention} No stats found for '{query}'");
+                await msg.Channel.SendMessageAsync($"{msg.Author.Mention} No stats found for '{query}'").ConfigureAwait(false);
             }
         }
 
