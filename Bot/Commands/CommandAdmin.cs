@@ -12,7 +12,6 @@ namespace Bot.Commands {
     public class CommandAdmin : Command {
         public CommandAdmin(string name) : base(name) {
             this.WithDescription("Extended control over the bot");
-            this.AddVerb<SaveVerb>();
             this.AddVerb<CommandVerb>();
             this.AddVerb<PrefixVerb>();
             this.AddVerb<ListVerb>();
@@ -27,14 +26,6 @@ namespace Bot.Commands {
         }
 
         #region Verbs
-        [Verb("save", HelpText = "Saves the configs")]
-        public class SaveVerb : Verb {
-            public override Task Execute(Command cmd, IMessage message, string[] args) {
-                Bot.Instance.Save();
-                return message.Reply("Saved");
-            }
-        }
-
         [Verb("command", HelpText = "Sets properties of a command")]
         public class CommandVerb : Verb {
             [Option('g', "global", Required = false, Default = false, HelpText = "Sets global command properties")]
@@ -55,13 +46,14 @@ namespace Bot.Commands {
             [Value(0, Required = true, MetaName = "command", HelpText = "The local name of the command")]
             public string Cmd { get; set; }
 
-            public override Task Execute(Command adminCmd, IMessage message, string[] args) {
+            public override async Task Execute(Command adminCmd, IMessage message, string[] args) {
                 IGuild guild = message.Channel.GetGuild();
 
                 // Get the command
                 Command cmd = Command.GetCommand(guild, this.Cmd);
                 if (cmd == null) {
-                    return message.Reply($"Unknown command '{this.Cmd}'");
+                    await message.Reply($"Unknown command '{this.Cmd}'").ConfigureAwait(false);
+                    return;
                 }
 
                 // Modify the config
@@ -82,8 +74,8 @@ namespace Bot.Commands {
                         c.Alias = this.Alias;
                 });
 
-                Bot.Instance.Save();
-                return message.Reply($"Command '{cmd.Name}' modified successfully");
+                await config.Save().ConfigureAwait(false);
+                await message.Reply($"Command '{cmd.Name}' modified successfully").ConfigureAwait(false);
             }
         }
 
@@ -102,11 +94,11 @@ namespace Bot.Commands {
             [Value(0, MetaName = "prefix", HelpText = "The new prefix of the command. Leave this out to reset the prefix")]
             public string Prefix { get; set; }
 
-            public override Task Execute(Command cmdAdmin, IMessage message, string[] args) {
+            public override async Task Execute(Command cmdAdmin, IMessage message, string[] args) {
                 ConfigHandler.ConfigWrapper<Bot.MainConfig> config = this.Global ? Bot.Instance.GetMainConfig() : Bot.Instance.GetMainConfig(message.Channel.GetGuild());
                 config.SetValue(c => c.Prefix = this.Prefix);
-                Bot.Instance.Save();
-                return message.Reply($"Command prefix set to '{this.Prefix}'{(this.Global ? " globally" : string.Empty)}");
+                await config.Save().ConfigureAwait(false);
+                await message.Reply($"Command prefix set to '{this.Prefix}'{(this.Global ? " globally" : string.Empty)}").ConfigureAwait(false);
             }
         }
 
@@ -116,12 +108,12 @@ namespace Bot.Commands {
             public string Nick { get; set; }
 
             public override async Task Execute(Command cmd, IMessage message, string[] args) {
-                IGuildUser user = await message.GetGuild().GetCurrentUserAsync();
-                await user.ModifyAsync(properties => properties.Nickname = this.Nick);
+                IGuildUser user = await message.GetGuild().GetCurrentUserAsync().ConfigureAwait(false);
+                await user.ModifyAsync(properties => properties.Nickname = this.Nick).ConfigureAwait(false);
                 if (this.Nick == null) {
-                    await message.Reply("Nickname removed");
+                    await message.Reply("Nickname removed").ConfigureAwait(false);
                 } else {
-                    await message.Reply($"Nickname changed to '{this.Nick}'");
+                    await message.Reply($"Nickname changed to '{this.Nick}'").ConfigureAwait(false);
                 }
             }
         }
@@ -131,7 +123,7 @@ namespace Bot.Commands {
             public override async Task Execute(Command cmd, IMessage message, string[] args) {
                 IAttachment attachment = message.Attachments.FirstOrDefault();
                 if (attachment == null) {
-                    await message.Reply("You must attach an image to this command");
+                    await message.Reply("You must attach an image to this command").ConfigureAwait(false);
                     return;
                 }
 
@@ -140,7 +132,7 @@ namespace Bot.Commands {
 
                     // Download the image
                     using (WebClient client = new WebClient())
-                        await client.DownloadFileTaskAsync(attachment.Url, downloadPath);
+                        await client.DownloadFileTaskAsync(attachment.Url, downloadPath).ConfigureAwait(false);
 
                     // Create the image file
                     Image image = new Image(downloadPath);
@@ -148,10 +140,10 @@ namespace Bot.Commands {
                     // Upload the image
                     await Bot.Instance.Client.CurrentUser.ModifyAsync(p => {
                         p.Avatar = image;
-                    });
+                    }).ConfigureAwait(false);
                 } catch (Exception ex) {
                     Bot.Instance.Log("Error while updating avatar", LogSeverity.Error, exception: ex);
-                    await message.Reply($"An error has occurred while downloading the image:```{ex.Message}```");
+                    await message.Reply($"An error has occurred while downloading the image:```{ex.Message}```").ConfigureAwait(false);
                 }
             }
         }

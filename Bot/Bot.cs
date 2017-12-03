@@ -35,17 +35,6 @@ namespace Bot {
             Bot.Instance = this;
             this.Config = new ConfigHandler(Bot.ConfigsPath);
 
-            // Setup timer
-            short seconds = 0;
-            this.SecondsTimer.Elapsed += async (sender, args) => {
-                if (++seconds % 60 != 0)
-                    return;
-
-                // Save every minute
-                await this.Save();
-                seconds = 0;
-            };
-
             // Setup bot client
             this.Client = new DiscordSocketClient();
             this.Client.Log += this.LogAsync;
@@ -140,13 +129,6 @@ namespace Bot {
             return true;
         }
 
-        [Obsolete]
-        public async Task Save() {
-            this.OnBeforeSaved();
-            await this.Config.Save().ConfigureAwait(false);
-            this.OnAfterSaved();
-        }
-
         public void Load() {
             this.Config.Load();
             this.OnAfterLoaded();
@@ -227,7 +209,7 @@ namespace Bot {
                             break;
                     }
                 }
-                
+
                 // Handle arg if done
                 if (done) {
                     try {

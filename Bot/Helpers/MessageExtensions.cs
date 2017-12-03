@@ -40,10 +40,12 @@ namespace Bot.Helpers {
             return channel is IGuildChannel guildChannel ? guildChannel.Guild : null;
         }
 
-        public static Task<IMessageChannel> GetMessageChannel(this IDiscordClient client, ulong id, CacheMode mode = CacheMode.AllowDownload, RequestOptions options = null) {
+        public static Task<IMessageChannel> GetMessageChannel(this IDiscordClient client, ulong id) => client.GetMessageChannel(id, null, CacheMode.AllowDownload);
+        public static Task<IMessageChannel> GetMessageChannel(this IDiscordClient client, ulong id, RequestOptions options) => client.GetMessageChannel(id, options, CacheMode.AllowDownload);
+        public static Task<IMessageChannel> GetMessageChannel(this IDiscordClient client, ulong id, RequestOptions options, CacheMode mode) {
             return client.GetChannelAsync(id, mode, options).ContinueWith(task => task.Result as IMessageChannel);
         }
-        
+
         public static string GetPrefix(this IMessage msg) => msg.Channel.GetGuild().GetPrefix();
         public static string GetPrefix(this IGuild guild) => Command.GetPrefix(guild);
 

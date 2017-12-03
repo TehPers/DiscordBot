@@ -9,11 +9,11 @@ namespace Bot.Helpers {
         public ulong ChannelID { get; set; }
 
         public async Task<IMessage> GetMessage() {
-            IMessageChannel channel = await Bot.Instance.Client.GetMessageChannel(this.ChannelID);
+            IMessageChannel channel = await Bot.Instance.Client.GetMessageChannel(this.ChannelID).ConfigureAwait(false);
             if (channel == null)
                 return null;
 
-            return await channel.GetMessageAsync(this.MessageID);
+            return await channel.GetMessageAsync(this.MessageID).ConfigureAwait(false);
         }
     }
 }
