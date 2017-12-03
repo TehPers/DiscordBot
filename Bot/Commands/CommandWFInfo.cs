@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
-using Bot.Extensions;
 using Bot.Helpers;
 using CommandLine;
 using Discord;

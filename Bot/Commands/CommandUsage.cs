@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using Bot.Extensions;
 using Bot.Helpers;
 using CommandLine;
 using Discord;

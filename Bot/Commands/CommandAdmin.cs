@@ -6,7 +6,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Bot.Extensions;
 using Bot.Helpers;
 
 namespace Bot.Commands {
@@ -166,8 +165,7 @@ namespace Bot.Commands {
             public bool Global { get; set; }
 
             public override Task Execute(Command cmd, IMessage message, string[] args) {
-                //ConfigHandler<IConfig> config = Bot.Instance.Config.Get<IConfig>();
-
+                // TODO
                 return Task.CompletedTask;
             }
         }

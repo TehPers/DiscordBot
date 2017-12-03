@@ -4,17 +4,9 @@ using System.Linq;
 using System.Text;
 using WarframeNET;
 
-namespace Bot.Helpers
-{
-    public static class WarframeExtensions
-    {
-        public static IEnumerable<string> ImportantRewardStrings(this Reward reward) {
-            IEnumerable<string> singleRewards = reward.Items.Where(WarframeExtensions.IsRewardImportant);
-            IEnumerable<string> countedRewards = reward.CountedItems.Where(item => WarframeExtensions.IsRewardImportant(item.Type)).Select(Emotes.Emotify);
-            return singleRewards.Concat(countedRewards);
-        }
-
-        /*public static IEnumerable<string> RewardStrings(this Reward reward) {
+namespace Bot.Helpers {
+    public static class WarframeExtensions {
+        public static IEnumerable<string> RewardStrings(this Reward reward) {
             List<string> fixedRewards = new List<string>();
             if (reward.Credits > 0)
                 fixedRewards.Add($"{reward.Credits}{Emotes.WFCredits}");
@@ -22,7 +14,13 @@ namespace Bot.Helpers
             IEnumerable<string> singleRewards = reward.Items;
             IEnumerable<string> countedRewards = reward.CountedItems.Select(Emotes.Emotify);
             return fixedRewards.Concat(singleRewards).Concat(countedRewards);
-        }*/
+        }
+
+        public static IEnumerable<string> ImportantRewardStrings(this Reward reward) {
+            IEnumerable<string> singleRewards = reward.Items.Where(WarframeExtensions.IsRewardImportant);
+            IEnumerable<string> countedRewards = reward.CountedItems.Where(item => WarframeExtensions.IsRewardImportant(item.Type)).Select(Emotes.Emotify);
+            return singleRewards.Concat(countedRewards);
+        }
 
         public static bool IsImportant(this Reward reward) {
             return reward.Items.Any(WarframeExtensions.IsRewardImportant) || reward.CountedItems.Any(items => WarframeExtensions.IsRewardImportant(items.Type));
@@ -54,8 +52,8 @@ namespace Bot.Helpers
                 result.Append($"{interval.Days}d ");
             if (interval.Hours > 0)
                 result.Append($"{interval.Hours}h ");
-            //if (interval.Minutes > 0)
-            result.Append($"{Math.Ceiling(interval.TotalMinutes % 60)}m");
+            if (interval.Minutes > 0 || interval.TotalMinutes < 1)
+                result.Append($"{Math.Ceiling(interval.TotalMinutes % 60)}m");
 
             return result.ToString();
         }

@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Bot.Extensions;
 using Bot.Helpers;
 using CommandLine;
 using Discord;
@@ -17,8 +16,7 @@ using Google.Apis.Sheets.v4.Data;
 using Google.Apis.Util.Store;
 
 namespace Bot.Commands {
-    public class CommandFEH : Command {
-        //private static string Sheet = "1x8QcIebWWDwkjAv0smQsJEqGp_AyOc_QhPgBrdGTxaE";
+    public class CommandFEH : Command {  
         private const string ApplicationName = "Tactician Bot";
         private static readonly string[] _scopes = { SheetsService.Scope.SpreadsheetsReadonly };
         private static readonly string KeyPath = Path.Combine(Bot.RootDirectory, "Secret", "google.json");
@@ -85,8 +83,9 @@ namespace Bot.Commands {
                         string value = row.Count > i ? row[i].ToString() : null;
                         string key = firstRow.Count > i ? firstRow[i].ToString() : null;
 
-                        if (key != null && value != null)
+                        if (key != null && value != null) {
                             sheetData.Stats.GetOrAdd(key, k => new ConcurrentDictionary<string, string>()).AddOrUpdate(stat, value, (k, v) => value);
+                        }
                     }
                 }
             }

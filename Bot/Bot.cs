@@ -10,7 +10,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Timers;
 using Bot.Commands;
-using Bot.Extensions;
 using Bot.Helpers;
 using Discord;
 using Discord.WebSocket;
@@ -168,13 +167,19 @@ namespace Bot {
             }
         }
 
-        public Task LogAsync(string message, LogSeverity severity = LogSeverity.Info, string source = "BOT", Exception exception = null) => this.LogAsync(new LogMessage(severity, source, message, exception));
+        public Task LogAsync(string message) => this.LogAsync(message, LogSeverity.Info, null, null);
+        public Task LogAsync(string message, LogSeverity severity) => this.LogAsync(message, severity, null, null);
+        public Task LogAsync(string message, LogSeverity severity, Exception exception) => this.LogAsync(message, severity, exception, null);
+        public Task LogAsync(string message, LogSeverity severity, Exception exception, string source) => this.LogAsync(new LogMessage(severity, source, message, exception));
         public Task LogAsync(LogMessage msg) {
             this.Log(msg);
             return Task.CompletedTask;
         }
 
-        public void Log(string message, LogSeverity severity = LogSeverity.Info, string source = "BOT", Exception exception = null) => this.Log(new LogMessage(severity, source, message, exception));
+        public void Log(string message) => this.Log(message, LogSeverity.Info, null, null);
+        public void Log(string message, LogSeverity severity) => this.Log(message, severity, null, null);
+        public void Log(string message, LogSeverity severity, Exception exception) => this.Log(message, severity, exception, null);
+        public void Log(string message, LogSeverity severity, Exception exception, string source) => this.Log(new LogMessage(severity, source, message, exception));
         public void Log(LogMessage msg) => this.OnLogged(msg);
 
         private Task ReadyAsync() {
@@ -198,24 +203,31 @@ namespace Bot {
                 // Handle current character
                 if (escaped) {
                     builder.Append(c);
-                } else if (c == '\\') {
-                    escaped = true;
-                    builder.Append(c);
-                } else if (c == '"' && builder.Length == 0) {
-                    quoted = true;
-                } else if (c == '"' && quoted) {
-                    quoted = false;
-                    done = true;
-                } else if (quoted || c != ' ') {
-                    builder.Append(c);
                 } else {
-                    if (string.IsNullOrWhiteSpace(builder.ToString())) {
-                        builder.Clear();
-                    } else {
-                        done = true;
+                    switch (c) {
+                        case '\\':
+                            escaped = true;
+                            break;
+                        case '"' when quoted:
+                            quoted = false;
+                            done = true;
+                            break;
+                        case '"' when builder.Length == 0:
+                            quoted = true;
+                            break;
+                        case ' ' when !quoted:
+                            if (string.IsNullOrWhiteSpace(builder.ToString())) {
+                                builder.Clear();
+                            } else {
+                                done = true;
+                            }
+                            break;
+                        default:
+                            builder.Append(c);
+                            break;
                     }
                 }
-
+                
                 // Handle arg if done
                 if (done) {
                     try {

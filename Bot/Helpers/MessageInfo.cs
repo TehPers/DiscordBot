@@ -2,7 +2,6 @@
 using System.Text;
 using System.Threading.Tasks;
 using Discord;
-using Bot.Extensions;
 
 namespace Bot.Helpers {
     public class MessageInfo {

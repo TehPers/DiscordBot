@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using Bot.Helpers;
 
 namespace Bot {
     public class ConcurrentSet<T> : ISet<T> {
@@ -42,7 +43,7 @@ namespace Bot {
         }
 
         public void SymmetricExceptWith(IEnumerable<T> other) {
-            other = Extensions.Extensions.ToHashSet(other);
+            other = Extensions.ToHashSet(other);
 
             HashSet<T> trimmed = new HashSet<T>(this._storage.Keys);
             trimmed.IntersectWith(other);

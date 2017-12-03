@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Bot.Commands;
-using Bot.Helpers;
 using Discord;
-using WarframeNET;
 
-namespace Bot.Extensions {
+namespace Bot.Helpers {
     public static class Extensions {
         public static string GetPrefix(this IMessage msg) => msg.Channel.GetGuild().GetPrefix();
         public static string GetPrefix(this IGuild guild) => Command.GetPrefix(guild);
