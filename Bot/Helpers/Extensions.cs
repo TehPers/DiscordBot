@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Bot.Commands;
 using Discord;
@@ -8,8 +9,6 @@ namespace Bot.Helpers {
     public static class Extensions {
         public static string GetPrefix(this IMessage msg) => msg.Channel.GetGuild().GetPrefix();
         public static string GetPrefix(this IGuild guild) => Command.GetPrefix(guild);
-
-        public static HashSet<TSource> ToHashSet<TSource>(this IEnumerable<TSource> source) => new HashSet<TSource>(source);
         
         public static string FixPunctuation(this string str) {
             StringBuilder r = new StringBuilder();

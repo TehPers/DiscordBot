@@ -43,12 +43,12 @@ namespace Bot {
         }
 
         public void SymmetricExceptWith(IEnumerable<T> other) {
-            other = Extensions.ToHashSet(other);
+            ISet<T> otherSet = other as ISet<T> ?? other.ToHashSet();
 
             HashSet<T> trimmed = new HashSet<T>(this._storage.Keys);
-            trimmed.IntersectWith(other);
+            trimmed.IntersectWith(otherSet);
 
-            HashSet<T> added = new HashSet<T>(other);
+            HashSet<T> added = new HashSet<T>(otherSet);
             added.ExceptWith(this._storage.Keys);
 
             foreach (T element in trimmed)
