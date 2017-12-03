@@ -155,7 +155,8 @@ namespace Bot {
             private readonly string _path;
             private bool _dirty;
 
-            public ConfigWrapper(TConfig config, string path, ConfigWrapper<TConfig> parent = null) {
+            public ConfigWrapper(TConfig config, string path) : this(config, path, null) { }
+            public ConfigWrapper(TConfig config, string path, ConfigWrapper<TConfig> parent) {
                 this._config = config;
                 this._path = path;
                 this._parent = parent;
@@ -211,7 +212,7 @@ namespace Bot {
                 // Don't try to save if not necessary
                 if (!this._dirty)
                     return;
-                
+
                 Directory.CreateDirectory(Path.GetDirectoryName(this._path));
                 using (FileStream stream = File.Open(this._path, FileMode.OpenOrCreate, FileAccess.Write)) {
                     string serialized;

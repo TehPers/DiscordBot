@@ -8,29 +8,29 @@ using Discord.Net;
 
 namespace Bot.Helpers {
     public static class MessageExtensions {
-        public static Task<IUserMessage> Reply(this IMessage msg, string reply) {
-            return msg.Channel.SendMessageSafe($"{msg.Author.Mention} {reply}");
+        public static Task<IUserMessage> Reply(this IMessage msg, string content) {
+            return msg.Channel.SendMessageSafe($"{msg.Author.Mention} {content}");
         }
 
-        public static Task<IUserMessage[]> SendToAll(this IEnumerable<IMessageChannel> channels, string text) => channels.SendToAll(text, null, null, false);
-        public static Task<IUserMessage[]> SendToAll(this IEnumerable<IMessageChannel> channels, string text, Embed embed) => channels.SendToAll(text, embed, null, false);
-        public static Task<IUserMessage[]> SendToAll(this IEnumerable<IMessageChannel> channels, string text, Embed embed, RequestOptions options) => channels.SendToAll(text, embed, options, false);
-        public static Task<IUserMessage[]> SendToAll(this IEnumerable<IMessageChannel> channels, string text, Embed embed, RequestOptions options, bool isTTS) {
-            return Task.WhenAll(channels.Select(channel => channel.SendMessageSafe(text, embed, options, isTTS)));
+        public static Task<IUserMessage[]> SendToAll(this IEnumerable<IMessageChannel> channels, string content) => channels.SendToAll(content, null, null, false);
+        public static Task<IUserMessage[]> SendToAll(this IEnumerable<IMessageChannel> channels, string content, Embed embed) => channels.SendToAll(content, embed, null, false);
+        public static Task<IUserMessage[]> SendToAll(this IEnumerable<IMessageChannel> channels, string content, Embed embed, RequestOptions options) => channels.SendToAll(content, embed, options, false);
+        public static Task<IUserMessage[]> SendToAll(this IEnumerable<IMessageChannel> channels, string content, Embed embed, RequestOptions options, bool isTTS) {
+            return Task.WhenAll(channels.Select(channel => channel.SendMessageSafe(content, embed, options, isTTS)));
         }
 
-        public static Task<IUserMessage> SendMessageSafe(this IMessageChannel channel, string text) => channel.SendMessageSafe(text, null, null, false);
-        public static Task<IUserMessage> SendMessageSafe(this IMessageChannel channel, string text, Embed embed) => channel.SendMessageSafe(text, embed, null, false);
-        public static Task<IUserMessage> SendMessageSafe(this IMessageChannel channel, string text, Embed embed, RequestOptions options) => channel.SendMessageSafe(text, embed, options, false);
-        public static async Task<IUserMessage> SendMessageSafe(this IMessageChannel channel, string text, Embed embed, RequestOptions options, bool isTTS) {
+        public static Task<IUserMessage> SendMessageSafe(this IMessageChannel channel, string content) => channel.SendMessageSafe(content, null, null, false);
+        public static Task<IUserMessage> SendMessageSafe(this IMessageChannel channel, string content, Embed embed) => channel.SendMessageSafe(content, embed, null, false);
+        public static Task<IUserMessage> SendMessageSafe(this IMessageChannel channel, string content, Embed embed, RequestOptions options) => channel.SendMessageSafe(content, embed, options, false);
+        public static async Task<IUserMessage> SendMessageSafe(this IMessageChannel channel, string content, Embed embed, RequestOptions options, bool isTTS) {
             // Make sure the bot is in this channel
             IUser user = await channel.GetUserAsync(Bot.Instance.Client.CurrentUser.Id, options: options).ConfigureAwait(false);
 
             // Send the message
             try {
-                return user == null ? null : await channel.SendMessageAsync(text, isTTS, embed, options).ConfigureAwait(false);
+                return user == null ? null : await channel.SendMessageAsync(content, isTTS, embed, options).ConfigureAwait(false);
             } catch (HttpException ex) {
-                throw new UserMessageException(text, isTTS, embed, options, ex);
+                throw new UserMessageException(content, embed, options, ex, isTTS);
             }
         }
 
@@ -93,7 +93,11 @@ namespace Bot.Helpers {
             public Embed Embed { get; }
             public RequestOptions Options { get; }
 
-            public UserMessageException(string content, bool isTTS = false, Embed embed = null, RequestOptions options = null, Exception innerException = null) : base($"A message failed to send: {content}", innerException) {
+            public UserMessageException(string content) : this(content, null) { }
+            public UserMessageException(string content, Embed embed) : this(content, embed, null) { }
+            public UserMessageException(string content, Embed embed, Exception innerException) : this(content, embed, innerException, null) { }
+            public UserMessageException(string content, Embed embed, Exception innerException, RequestOptions options) : this(content, embed, innerException, options, false) { }
+            public UserMessageException(string content, Embed embed, Exception innerException, RequestOptions options, bool isTTS) : base($"A message failed to send: {content}", innerException) {
                 this.Content = content;
                 this.IsTTS = isTTS;
                 this.Embed = embed;
