@@ -14,7 +14,7 @@ using Newtonsoft.Json;
 using WarframeNET;
 
 namespace Bot.Commands {
-    public class CommandWFInfo : Command {
+    public class CommandWFInfo : Command, IDisposable {
         public static string TrackedPlatform { get; } = Platform.PC;
         private const string ConfigName = "tracked";
 
@@ -45,7 +45,7 @@ namespace Bot.Commands {
 
         public override async Task Load() {
             // Prevent it from posting alerts as soon as the bot is reset
-            WorldState state = await this._client.GetWorldStateAsync(CommandWFInfo.TrackedPlatform);
+            WorldState state = await this._client.GetWorldStateAsync(CommandWFInfo.TrackedPlatform).ConfigureAwait(false);
             foreach (Alert alert in state.WS_Alerts)
                 this._trackedIDs.Add(alert.Id);
             foreach (Invasion invasion in state.WS_Invasions)
@@ -75,7 +75,7 @@ namespace Bot.Commands {
             if (this._secondsElapsed % CommandWFInfo.InvasionsUpdateRate == 0)
                 tasks.Add(this.UpdateInvasions());
 
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
         }
 
         private async Task UpdateCetus() {
@@ -88,8 +88,8 @@ namespace Bot.Commands {
                 // Update messages
                 TimedMessageInfo[] messages = config.GetValue(c => c.CetusMessages.ToArray());
                 foreach (TimedMessageInfo messageInfo in messages) {
-                    if (await messageInfo.GetMessage() is IUserMessage msg) {
-                        await msg.ModifyAsync(m => m.Embed = CommandWFInfo.GetCetusEmbed().Build());
+                    if (await messageInfo.GetMessage().ConfigureAwait(false) is IUserMessage msg) {
+                        await msg.ModifyAsync(m => m.Embed = CommandWFInfo.GetCetusEmbed().Build()).ConfigureAwait(false);
                     } else {
                         config.SetValue(c => c.CetusMessages.Remove(messageInfo));
                     }
@@ -100,8 +100,8 @@ namespace Bot.Commands {
                 // Delete current Cetus messages
                 TimedMessageInfo[] messages = config.GetValue(c => c.CetusMessages.ToArray());
                 foreach (TimedMessageInfo messageInfo in messages) {
-                    if (await messageInfo.GetMessage() is IUserMessage msg)
-                        await msg.DeleteAsync();
+                    if (await messageInfo.GetMessage().ConfigureAwait(false) is IUserMessage msg)
+                        await msg.DeleteAsync().ConfigureAwait(false);
 
                     // Stop tracking the deleted message
                     config.SetValue(c => c.CetusMessages.Remove(messageInfo));
@@ -121,18 +121,18 @@ namespace Bot.Commands {
                     // Send a new message
                     return channel.SendMessageAsync(channelMessages[channel.Id], embed: embed)
 
-                    // Track it
-                    .ContinueWith(task => {
-                        config.SetValue(c => c.CetusMessages.Add(new TimedMessageInfo {
-                            MessageID = task.Result.Id,
-                            ChannelID = task.Result.Channel.Id,
-                            DeleteTime = now + CommandWFInfo.CycleTimeLeft(now)
-                        }));
-                    });
-                }));
+                        // Track it
+                        .ContinueWith(task => {
+                            config.SetValue(c => c.CetusMessages.Add(new TimedMessageInfo {
+                                MessageID = task.Result.Id,
+                                ChannelID = task.Result.Channel.Id,
+                                DeleteTime = now + CommandWFInfo.CycleTimeLeft(now)
+                            }));
+                        });
+                })).ConfigureAwait(false);
             }
 
-            await config.Save();
+            await config.Save().ConfigureAwait(false);
         }
 
         private async Task UpdateAlerts() {
@@ -146,8 +146,8 @@ namespace Bot.Commands {
                     config.SetValue(c => c.AlertMessages.Remove(messageInfo));
 
                     // Delete the message
-                    if (await messageInfo.GetMessage() is IUserMessage msg) {
-                        await msg.DeleteAsync();
+                    if (await messageInfo.GetMessage().ConfigureAwait(false) is IUserMessage msg) {
+                        await msg.DeleteAsync().ConfigureAwait(false);
                     } else {
                         config.SetValue(c => c.CetusMessages.Remove(messageInfo));
                     }
@@ -156,8 +156,8 @@ namespace Bot.Commands {
                     config.SetValue(c => messageInfo.Expired = true);
 
                     // Modify the message
-                    if (await messageInfo.GetMessage() is IUserMessage msg) {
-                        await msg.ModifyAsync(m => m.Embed = msg.Embeds.FirstOrDefault()?.AsBuilder().WithColor(CommandWFInfo.ExpiredColor).Build());
+                    if (await messageInfo.GetMessage().ConfigureAwait(false) is IUserMessage msg) {
+                        await msg.ModifyAsync(m => m.Embed = msg.Embeds.FirstOrDefault()?.AsBuilder().WithColor(CommandWFInfo.ExpiredColor).Build()).ConfigureAwait(false);
                     } else {
                         config.SetValue(c => c.CetusMessages.Remove(messageInfo));
                     }
@@ -173,7 +173,7 @@ namespace Bot.Commands {
                 .ToArray();
 
             // Post new alerts
-            WorldState state = await this.GetWorldState();
+            WorldState state = await this.GetWorldState().ConfigureAwait(false);
             foreach (Alert alert in state.WS_Alerts) {
                 // Make sure it isn't being tracked, and track it if necessary
                 if (!this._trackedIDs.Add(alert.Id))
@@ -190,24 +190,24 @@ namespace Bot.Commands {
                 await Task.WhenAll(channels.Select(channel => {
                     // Send a new message
                     return channel.SendMessageAsync(channelMessages[channel.Id], embed: embed)
-                    // Track it
-                    .ContinueWith(task => {
-                        config.SetValue(c => c.AlertMessages.Add(new TimedMessageInfo {
-                            MessageID = task.Result.Id,
-                            ChannelID = task.Result.Channel.Id,
-                            ExpireTime = alert.EndTime,
-                            DeleteTime = alert.EndTime + CommandWFInfo.HistoryLength
-                        }));
-                    });
-                }));
+                        // Track it
+                        .ContinueWith(task => {
+                            config.SetValue(c => c.AlertMessages.Add(new TimedMessageInfo {
+                                MessageID = task.Result.Id,
+                                ChannelID = task.Result.Channel.Id,
+                                ExpireTime = alert.EndTime,
+                                DeleteTime = alert.EndTime + CommandWFInfo.HistoryLength
+                            }));
+                        });
+                })).ConfigureAwait(false);
             }
 
-            await config.Save();
+            await config.Save().ConfigureAwait(false);
         }
 
         private async Task UpdateInvasions() {
             ConfigHandler.ConfigWrapper<Storage> config = this.GetConfig<Storage>(CommandWFInfo.ConfigName);
-            WorldState state = await this.GetWorldState();
+            WorldState state = await this.GetWorldState().ConfigureAwait(false);
 
             // Update messages
             InvasionMessageInfo[] messages = config.GetValue(c => c.InvasionMessages.ToArray());
@@ -217,8 +217,8 @@ namespace Bot.Commands {
                     config.SetValue(c => c.InvasionMessages.Remove(messageInfo));
 
                     // Delete the message
-                    if (await messageInfo.GetMessage() is IUserMessage msg) {
-                        await msg.DeleteAsync();
+                    if (await messageInfo.GetMessage().ConfigureAwait(false) is IUserMessage msg) {
+                        await msg.DeleteAsync().ConfigureAwait(false);
                     } else {
                         config.SetValue(c => c.CetusMessages.Remove(messageInfo));
                     }
@@ -232,8 +232,8 @@ namespace Bot.Commands {
                         config.SetValue(c => messageInfo.Expired = true);
 
                         // Modify the message
-                        if (await messageInfo.GetMessage() is IUserMessage msg) {
-                            await msg.ModifyAsync(m => m.Embed = msg.Embeds.FirstOrDefault()?.AsBuilder().WithColor(CommandWFInfo.ExpiredColor).Build());
+                        if (await messageInfo.GetMessage().ConfigureAwait(false) is IUserMessage msg) {
+                            await msg.ModifyAsync(m => m.Embed = msg.Embeds.FirstOrDefault()?.AsBuilder().WithColor(CommandWFInfo.ExpiredColor).Build()).ConfigureAwait(false);
                         } else {
                             config.SetValue(c => c.CetusMessages.Remove(messageInfo));
                         }
@@ -270,32 +270,32 @@ namespace Bot.Commands {
                 await Task.WhenAll(channels.Select(channel => {
                     // Send a new message
                     return channel.SendMessageAsync(channelMessages[channel.Id], embed: embed)
-                    // Track it
-                    .ContinueWith(task => {
-                        config.SetValue(c => c.InvasionMessages.Add(new InvasionMessageInfo {
-                            MessageID = task.Result.Id,
-                            ChannelID = task.Result.Channel.Id,
-                            InvasionID = invasion.Id
-                        }));
-                    });
-                }));
+                        // Track it
+                        .ContinueWith(task => {
+                            config.SetValue(c => c.InvasionMessages.Add(new InvasionMessageInfo {
+                                MessageID = task.Result.Id,
+                                ChannelID = task.Result.Channel.Id,
+                                InvasionID = invasion.Id
+                            }));
+                        });
+                })).ConfigureAwait(false);
             }
 
-            await config.Save();
+            await config.Save().ConfigureAwait(false);
         }
 
         private async Task<WorldState> GetWorldState() {
             // Make sure this code only happens once
-            if (!await this._worldStateLock.WaitAsync(5000))
+            if (!await this._worldStateLock.WaitAsync(5000).ConfigureAwait(false))
                 throw new Exception("Timed out");
 
             // Update the world state if necessary
             if (DateTimeOffset.Now - this._lastWorldState >= CommandWFInfo.WorldStateRate) {
                 try {
                     this._lastWorldState = DateTimeOffset.Now;
-                    this._worldState = await this._client.GetWorldStateAsync(CommandWFInfo.TrackedPlatform);
+                    this._worldState = await this._client.GetWorldStateAsync(CommandWFInfo.TrackedPlatform).ConfigureAwait(false);
                 } catch (Exception ex) {
-                    Bot.Instance.Log("Failed to download Warframe world state", LogSeverity.Warning, exception: ex);
+                    Bot.Instance.Log("Failed to download Warframe world state", LogSeverity.Warning, ex);
                 }
             }
 
@@ -376,8 +376,8 @@ namespace Bot.Commands {
                     }
                 });
 
-                await task;
-                await config.Save();
+                await task.ConfigureAwait(false);
+                await config.Save().ConfigureAwait(false);
             }
         }
 
@@ -399,8 +399,8 @@ namespace Bot.Commands {
                     }
                 });
 
-                await task;
-                await config.Save();
+                await task.ConfigureAwait(false);
+                await config.Save().ConfigureAwait(false);
             }
         }
 
@@ -422,8 +422,8 @@ namespace Bot.Commands {
                     }
                 });
 
-                await task;
-                await config.Save();
+                await task.ConfigureAwait(false);
+                await config.Save().ConfigureAwait(false);
             }
         }
         #endregion
@@ -459,6 +459,10 @@ namespace Bot.Commands {
         private static TimeSpan CycleTime(DateTime time) => CommandWFInfo.IsDay(time) ? CommandWFInfo.DayTime(time) : CommandWFInfo.DayTime(time) - CommandWFInfo.DayLength;
         private static TimeSpan CycleTimeLeft(DateTime time) => (CommandWFInfo.IsDay(time) ? CommandWFInfo.DayLength : CommandWFInfo.CycleLength) - CommandWFInfo.DayTime(time);
         #endregion
+
+        public void Dispose() {
+            this._worldStateLock?.Dispose();
+        }
     }
 }
 

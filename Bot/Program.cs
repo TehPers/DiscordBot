@@ -11,15 +11,15 @@ namespace Bot
         public async Task MainAsync()
         {
             Bot bot = new Bot();
-            if (await bot.StartAsync())
-                await this.ConsoleHandler();
+            if (await bot.StartAsync().ConfigureAwait(false))
+                await this.ConsoleHandler().ConfigureAwait(false);
             else
                 Console.Read();
         }
 
         public Task ConsoleHandler()
         {
-            while (this.Running)
+            while (this._running)
             {
                 string input = Console.ReadLine();
                 if (input == null)
@@ -33,7 +33,7 @@ namespace Bot
                 switch (cmd)
                 {
                     case "exit":
-                        this.Running = false;
+                        this._running = false;
                         break;
                     case "help":
                         Console.WriteLine("Type 'exit' to exit");
@@ -46,6 +46,6 @@ namespace Bot
             return Task.CompletedTask;
         }
 
-        public bool Running = true;
+        private bool _running = true;
     }
 }

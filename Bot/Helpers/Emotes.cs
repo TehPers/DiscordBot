@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Text;
 using WarframeNET;
 
-namespace Bot {
+namespace Bot.Helpers {
     public static class Emotes {
         public static string WFLotus { get; } = "<:WFLotus:380292389534826498>";
         public static string WFCredits { get; } = "<:WFCredits:380292390226886657>";

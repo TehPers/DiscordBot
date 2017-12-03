@@ -76,7 +76,7 @@ namespace Bot {
             foreach (string configName in this._globalConfigs.Keys) {
                 ConfigWrapper<IConfig> config = this.Get<IConfig>(configName);
                 if (config != null) {
-                    await config.Save();
+                    await config.Save().ConfigureAwait(false);
                 }
             }
 
@@ -85,7 +85,7 @@ namespace Bot {
                 foreach (string configName in guildConfigs.Value.Keys) {
                     ConfigWrapper<IConfig> config = this.Get<IConfig>(configName, guildConfigs.Key);
                     if (config != null) {
-                        await config.Save();
+                        await config.Save().ConfigureAwait(false);
                     }
                 }
             }
@@ -211,8 +211,7 @@ namespace Bot {
                 // Don't try to save if not necessary
                 if (!this._dirty)
                     return;
-
-                //Bot.Instance.Config.Save();
+                
                 Directory.CreateDirectory(Path.GetDirectoryName(this._path));
                 using (FileStream stream = File.Open(this._path, FileMode.OpenOrCreate, FileAccess.Write)) {
                     string serialized;
@@ -220,7 +219,7 @@ namespace Bot {
                         serialized = JsonConvert.SerializeObject(this._config, Formatting.Indented, ConfigHandler.SerializerSettings);
 
                     byte[] data = Encoding.UTF8.GetBytes(serialized);
-                    await stream.WriteAsync(data, 0, data.Length);
+                    await stream.WriteAsync(data, 0, data.Length).ConfigureAwait(false);
                 }
             }
             #endregion

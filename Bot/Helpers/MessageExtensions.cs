@@ -23,11 +23,11 @@ namespace Bot.Helpers {
         public static Task<IUserMessage> SendMessageSafe(this IMessageChannel channel, string text, Embed embed, RequestOptions options) => channel.SendMessageSafe(text, embed, options, false);
         public static async Task<IUserMessage> SendMessageSafe(this IMessageChannel channel, string text, Embed embed, RequestOptions options, bool isTTS) {
             // Make sure the bot is in this channel
-            IUser user = await channel.GetUserAsync(Bot.Instance.Client.CurrentUser.Id, options: options);
+            IUser user = await channel.GetUserAsync(Bot.Instance.Client.CurrentUser.Id, options: options).ConfigureAwait(false);
 
             // Send the message
             try {
-                return user == null ? null : await channel.SendMessageAsync(text, isTTS, embed, options);
+                return user == null ? null : await channel.SendMessageAsync(text, isTTS, embed, options).ConfigureAwait(false);
             } catch (HttpException ex) {
                 throw new UserMessageException(text, isTTS, embed, options, ex);
             }

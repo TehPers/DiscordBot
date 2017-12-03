@@ -37,12 +37,12 @@ namespace Bot {
 
             // Setup timer
             short seconds = 0;
-            this.SecondsTimer.Elapsed += (sender, args) => {
+            this.SecondsTimer.Elapsed += async (sender, args) => {
                 if (++seconds % 60 != 0)
                     return;
 
                 // Save every minute
-                this.Save().Wait();
+                await this.Save();
                 seconds = 0;
             };
 
@@ -101,7 +101,7 @@ namespace Bot {
 
             // Load all commands
             foreach (Command cmd in Command.CommandRegistry.Values)
-                await cmd.Load();
+                await cmd.Load().ConfigureAwait(false);
 
             // Start ticking
             this.SecondsTimer.Start();
@@ -116,13 +116,13 @@ namespace Bot {
             try {
                 if (!File.Exists(Bot.MainConfigPath)) {
                     mainConfig = new BotConfig();
-                    await File.WriteAllTextAsync(Bot.MainConfigPath, JsonConvert.SerializeObject(mainConfig));
+                    await File.WriteAllTextAsync(Bot.MainConfigPath, JsonConvert.SerializeObject(mainConfig)).ConfigureAwait(false);
                     this.Log($"Bot config file not found. Creating new one at {Bot.MainConfigPath}. Please fill it in.");
                     return false;
                 }
 
                 using (StreamReader file = File.OpenText(Bot.MainConfigPath)) {
-                    mainConfig = JsonConvert.DeserializeObject<BotConfig>(await file.ReadToEndAsync());
+                    mainConfig = JsonConvert.DeserializeObject<BotConfig>(await file.ReadToEndAsync().ConfigureAwait(false));
                 }
             } catch (Exception ex) {
                 this.Log("Failed to deserialize main config file: " + Bot.MainConfigPath, LogSeverity.Error, exception: ex);
@@ -135,15 +135,15 @@ namespace Bot {
                 return false;
             }
 
-            await this.Client.LoginAsync(TokenType.Bot, token);
-            await this.Client.StartAsync();
+            await this.Client.LoginAsync(TokenType.Bot, token).ConfigureAwait(false);
+            await this.Client.StartAsync().ConfigureAwait(false);
             return true;
         }
 
         [Obsolete]
         public async Task Save() {
             this.OnBeforeSaved();
-            await this.Config.Save();
+            await this.Config.Save().ConfigureAwait(false);
             this.OnAfterSaved();
         }
 
@@ -275,7 +275,7 @@ namespace Bot {
 
             Command cmd = Command.AvailableCommands(msg.Channel.GetGuild(), msg.Author).FirstOrDefault(c => c.GetName(msg.Channel.GetGuild()) == cmdName);
             if (cmd != null) {
-                await cmd.Execute(msg, args);
+                await cmd.Execute(msg, args).ConfigureAwait(false);
             }
         }
         #endregion
