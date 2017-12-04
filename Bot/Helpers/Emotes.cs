@@ -14,7 +14,8 @@ namespace Bot.Helpers {
         public static string WFGrineer { get; } = "<:WFGrineer:384570820191584256>";
         public static string WFCorpus { get; } = "<:WFCorpus:384571252343308288>";
 
-        public static string Emotify(CountedItem item) {
+        public static string Emotify(CountedItem item) => Emotes.Emotify(new WarframeExtensions.StackedItem(item));
+        public static string Emotify(WarframeExtensions.StackedItem item) {
             (string emote, bool currency)? emote = Emotes.EmotifyRaw(item.Type);
             if (emote == null)
                 return item.Count == 1 ? item.Type : $"{item.Count}x {item.Type}";

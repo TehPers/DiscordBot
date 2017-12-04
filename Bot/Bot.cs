@@ -254,8 +254,8 @@ namespace Bot {
                 this.Log($"Failed to parse message: {msg.Content}", LogSeverity.Warning);
                 return;
             }
-
-            Command cmd = Command.AvailableCommands(msg.Channel.GetGuild(), msg.Author).FirstOrDefault(c => c.GetName(msg.Channel.GetGuild()) == cmdName);
+            
+            Command cmd = Command.GetCommand(msg.Channel.GetGuild(), cmdName);
             if (cmd != null) {
                 await cmd.Execute(msg, args).ConfigureAwait(false);
             }

@@ -7,25 +7,31 @@ using WarframeNET;
 namespace Bot.Helpers {
     public static class WarframeExtensions {
         public static IEnumerable<string> RewardStrings(this Reward reward) {
-            List<string> fixedRewards = new List<string>();
-            if (reward.Credits > 0)
-                fixedRewards.Add($"{reward.Credits}{Emotes.WFCredits}");
-
-            IEnumerable<string> singleRewards = reward.Items;
-            IEnumerable<string> countedRewards = reward.CountedItems.Select(Emotes.Emotify);
-            return fixedRewards.Concat(singleRewards).Concat(countedRewards);
+            return reward.ToStackedItems().Select(Emotes.Emotify);
         }
 
         public static IEnumerable<string> ImportantRewardStrings(this Reward reward) {
-            IEnumerable<string> singleRewards = reward.Items.Where(WarframeExtensions.IsRewardImportant);
-            IEnumerable<string> countedRewards = reward.CountedItems.Where(item => WarframeExtensions.IsRewardImportant(item.Type)).Select(Emotes.Emotify);
-            return singleRewards.Concat(countedRewards);
+            return reward.ImportantRewards().Select(Emotes.Emotify);
+        }
+
+        public static IEnumerable<StackedItem> ImportantRewards(this Reward reward) {
+            return reward.ToStackedItems().Where(i => i.IsImportant());
+        }
+
+        public static IEnumerable<StackedItem> ToStackedItems(this Reward reward) {
+            List<StackedItem> rewards = new List<StackedItem>();
+            if (reward.Credits > 0)
+                rewards.Add(new StackedItem("credits", reward.Credits));
+            rewards.AddRange(reward.Items.Select(i => new StackedItem(i, 1)));
+            rewards.AddRange(reward.CountedItems.Select(i => new StackedItem(i)));
+            return rewards;
         }
 
         public static bool IsImportant(this Reward reward) {
-            return reward.Items.Any(WarframeExtensions.IsRewardImportant) || reward.CountedItems.Any(items => WarframeExtensions.IsRewardImportant(items.Type));
+            return reward.ToStackedItems().Any(WarframeExtensions.IsImportant);
         }
 
+        public static bool IsImportant(this StackedItem item) => WarframeExtensions.IsRewardImportant(item.Type);
         private static bool IsRewardImportant(string type) {
             return string.Equals(type, "nitain extract", StringComparison.OrdinalIgnoreCase)
                    || string.Equals(type, "kavat genetic code", StringComparison.OrdinalIgnoreCase)
@@ -40,6 +46,7 @@ namespace Bot.Helpers {
                    || type.IndexOf("sheev", StringComparison.OrdinalIgnoreCase) != -1
                    || type.IndexOf("wraith", StringComparison.OrdinalIgnoreCase) != -1
                    || type.IndexOf("vandal", StringComparison.OrdinalIgnoreCase) != -1
+                   || type.IndexOf("riven", StringComparison.OrdinalIgnoreCase) != -1
                 ;
         }
 
@@ -56,6 +63,18 @@ namespace Bot.Helpers {
                 result.Append($"{Math.Ceiling(interval.TotalMinutes % 60)}m");
 
             return result.ToString();
+        }
+
+        public struct StackedItem {
+            public string Type { get; set; }
+            public int Count { get; set; }
+
+            public StackedItem(string type) : this(type, 0) { }
+            public StackedItem(CountedItem item) : this(item.Type, item.Count) { }
+            public StackedItem(string type, int count) {
+                this.Type = type;
+                this.Count = count;
+            }
         }
     }
 }

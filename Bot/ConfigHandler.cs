@@ -146,7 +146,7 @@ namespace Bot {
         #region Helpers
         public static bool IsValidKey(string key) => key.IndexOfAny(Path.GetInvalidFileNameChars()) != -1;
         #endregion
-        
+
         public class ConfigWrapper<TConfig> where TConfig : IConfig {
             private readonly TConfig _config;
             private readonly ConfigWrapper<TConfig> _parent;
@@ -212,7 +212,7 @@ namespace Bot {
                     return;
 
                 Directory.CreateDirectory(Path.GetDirectoryName(this._path));
-                using (FileStream stream = File.Open(this._path, FileMode.OpenOrCreate, FileAccess.Write)) {
+                using (FileStream stream = File.Open(this._path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None)) {
                     string serialized;
                     lock (this._config)
                         serialized = JsonConvert.SerializeObject(this._config, Formatting.Indented, ConfigHandler.SerializerSettings);

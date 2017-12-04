@@ -22,10 +22,15 @@ namespace Bot.Commands {
         private static readonly Color ActiveColor = Color.DarkGreen;
         private static readonly Color ExpiredColor = Color.Red;
 
+#if DEBUG
+        private const int CetusUpdateRate = 10;
+        private const int AlertsUpdateRate = 10;
+        private const int InvasionsUpdateRate = 10;
+#else
         private const int CetusUpdateRate = 60;
         private const int AlertsUpdateRate = 60;
         private const int InvasionsUpdateRate = 60;
-
+#endif
         private static readonly TimeSpan WorldStateRate = new TimeSpan(hours: 0, minutes: 1, seconds: 0);
         private DateTimeOffset _lastWorldState = DateTimeOffset.Now - CommandWFInfo.WorldStateRate;
         private WorldState _worldState;
@@ -41,17 +46,18 @@ namespace Bot.Commands {
             this.AddVerb<CetusVerb>();
             this.AddVerb<AlertsVerb>();
             this.AddVerb<InvasionsVerb>();
+            this.AddVerb<ToggleVerb>();
         }
 
         public override async Task Load() {
             // Prevent it from posting alerts as soon as the bot is reset
             WorldState state = await this._client.GetWorldStateAsync(CommandWFInfo.TrackedPlatform).ConfigureAwait(false);
-            foreach (Alert alert in state.WS_Alerts)
+            /*foreach (Alert alert in state.WS_Alerts)
                 this._trackedIDs.Add(alert.Id);
             foreach (Invasion invasion in state.WS_Invasions)
                 this._trackedIDs.Add(invasion.Id);
-
-            this._day = CommandWFInfo.IsDay(DateTime.UtcNow);
+                */
+            this._day = !CommandWFInfo.IsDay(DateTime.UtcNow);
 
             // Start tracking
             Bot.Instance.SecondsTimer.Elapsed += this.UpdateMessages;
@@ -63,7 +69,7 @@ namespace Bot.Commands {
 
             return base.Unload();
         }
-        
+
         private async void UpdateMessages(object sender, ElapsedEventArgs elapsedEventArgs) {
             this._secondsElapsed++;
 
@@ -108,8 +114,7 @@ namespace Bot.Commands {
                 }
 
                 // Get all tracked channels
-                Dictionary<ulong, string> channelMessages = config.GetValue(c => c.CetusChannels.ToDictionary(kv => kv.Key, kv => kv.Value));
-                IMessageChannel[] channels = channelMessages.Keys
+                IMessageChannel[] channels = config.GetValue(c => c.CetusChannels.ToArray())
                     .Select(id => Bot.Instance.GetChannel(id))
                     .Where(channel => channel is IMessageChannel)
                     .Cast<IMessageChannel>()
@@ -118,8 +123,10 @@ namespace Bot.Commands {
                 // Create new messages
                 Embed embed = CommandWFInfo.GetCetusEmbed().Build();
                 await Task.WhenAll(channels.Select(channel => {
+                    IRole role = WFInfoVerb.GetRole(this, channel.GetGuild(), day ? "day" : "night");
+
                     // Send a new message
-                    return channel.SendMessageAsync(channelMessages[channel.Id], embed: embed)
+                    return channel.SendMessageAsync(role?.Mention ?? "", embed: embed)
 
                         // Track it
                         .ContinueWith(task => {
@@ -165,8 +172,7 @@ namespace Bot.Commands {
             }
 
             // Get tracked channels
-            Dictionary<ulong, string> channelMessages = config.GetValue(c => c.AlertChannels.ToDictionary(kv => kv.Key, kv => kv.Value));
-            IMessageChannel[] channels = channelMessages.Keys
+            IMessageChannel[] channels = config.GetValue(c => c.AlertChannels.ToArray())
                 .Select(id => Bot.Instance.GetChannel(id))
                 .Where(channel => channel is IMessageChannel)
                 .Cast<IMessageChannel>()
@@ -188,8 +194,10 @@ namespace Bot.Commands {
 
                 // Create new messages
                 await Task.WhenAll(channels.Select(channel => {
+                    IEnumerable<string> mentions = WFInfoVerb.GetRoles(this, channel.GetGuild(), alert.Mission.Reward.ImportantRewards()).Select(r => r.Mention);
+
                     // Send a new message
-                    return channel.SendMessageAsync(channelMessages[channel.Id], embed: embed)
+                    return channel.SendMessageAsync(string.Join(" ", mentions), embed: embed)
                         // Track it
                         .ContinueWith(task => {
                             config.SetValue(c => c.AlertMessages.Add(new TimedMessageInfo {
@@ -242,8 +250,7 @@ namespace Bot.Commands {
             }
 
             // Get tracked channels
-            Dictionary<ulong, string> channelMessages = config.GetValue(c => c.InvasionChannels.ToDictionary(kv => kv.Key, kv => kv.Value));
-            IMessageChannel[] channels = channelMessages.Keys
+            IMessageChannel[] channels = config.GetValue(c => c.InvasionChannels.ToArray())
                 .Select(id => Bot.Instance.GetChannel(id))
                 .Where(channel => channel is IMessageChannel)
                 .Cast<IMessageChannel>()
@@ -268,8 +275,10 @@ namespace Bot.Commands {
 
                 // Create new messages
                 await Task.WhenAll(channels.Select(channel => {
+                    IEnumerable<string> mentions = WFInfoVerb.GetRoles(this, channel.GetGuild(), invasion.AttackerReward.ImportantRewards().Concat(invasion.DefenderReward.ImportantRewards())).Select(r => r.Mention);
+
                     // Send a new message
-                    return channel.SendMessageAsync(channelMessages[channel.Id], embed: embed)
+                    return channel.SendMessageAsync(string.Join(" ", mentions), embed: embed)
                         // Track it
                         .ContinueWith(task => {
                             config.SetValue(c => c.InvasionMessages.Add(new InvasionMessageInfo {
@@ -359,15 +368,11 @@ namespace Bot.Commands {
 
         #region Verbs
         [Verb("cetus", HelpText = "Displays current time in Cetus")]
-        public class CetusVerb : Verb {
-            [Value(0, Required = false, MetaName = "body", HelpText = "Contents of the message (before the embed)")]
-            public string Body { get; set; }
-
+        public class CetusVerb : WFInfoVerb {
             public override async Task Execute(Command cmd, IMessage message, string[] args) {
                 Task task = Task.CompletedTask;
                 ConfigHandler.ConfigWrapper<Storage> config = cmd.GetConfig<Storage>(CommandWFInfo.ConfigName).SetValue(c => {
-                    if (!c.CetusChannels.ContainsKey(message.Channel.Id)) {
-                        c.CetusChannels.Add(message.Channel.Id, this.Body);
+                    if (c.CetusChannels.Add(message.Channel.Id)) {
                         task = message.Reply("World state will now be tracked in this channel.");
                     } else if (c.CetusChannels.Remove(message.Channel.Id)) {
                         task = message.Reply("World state will no longer be tracked in this channel.");
@@ -382,15 +387,11 @@ namespace Bot.Commands {
         }
 
         [Verb("alerts", HelpText = "Displays Warframe alerts")]
-        public class AlertsVerb : Verb {
-            [Value(0, Required = false, MetaName = "body", HelpText = "Contents of the message (before the embed)")]
-            public string Body { get; set; }
-
+        public class AlertsVerb : WFInfoVerb {
             public override async Task Execute(Command cmd, IMessage message, string[] args) {
                 Task task = Task.CompletedTask;
                 ConfigHandler.ConfigWrapper<Storage> config = cmd.GetConfig<Storage>(CommandWFInfo.ConfigName).SetValue(c => {
-                    if (!c.AlertChannels.ContainsKey(message.Channel.Id)) {
-                        c.AlertChannels.Add(message.Channel.Id, this.Body);
+                    if (c.AlertChannels.Add(message.Channel.Id)) {
                         task = message.Reply("Alerts will now be tracked in this channel.");
                     } else if (c.AlertChannels.Remove(message.Channel.Id)) {
                         task = message.Reply("Alerts will no longer be tracked in this channel.");
@@ -405,15 +406,11 @@ namespace Bot.Commands {
         }
 
         [Verb("invasions", HelpText = "Displays Warframe invasions")]
-        public class InvasionsVerb : Verb {
-            [Value(0, Required = false, MetaName = "body", HelpText = "Contents of the message (before the embed)")]
-            public string Body { get; set; }
-
+        public class InvasionsVerb : WFInfoVerb {
             public override async Task Execute(Command cmd, IMessage message, string[] args) {
                 Task task = Task.CompletedTask;
                 ConfigHandler.ConfigWrapper<Storage> config = cmd.GetConfig<Storage>(CommandWFInfo.ConfigName).SetValue(c => {
-                    if (!c.InvasionChannels.ContainsKey(message.Channel.Id)) {
-                        c.InvasionChannels.Add(message.Channel.Id, this.Body);
+                    if (c.InvasionChannels.Add(message.Channel.Id)) {
                         task = message.Reply("Invasions will now be tracked in this channel.");
                     } else if (c.InvasionChannels.Remove(message.Channel.Id)) {
                         task = message.Reply("Invasions will no longer be tracked in this channel.");
@@ -426,15 +423,116 @@ namespace Bot.Commands {
                 await config.Save().ConfigureAwait(false);
             }
         }
+
+        [Verb("toggle", HelpText = "Toggles specific pings")]
+        public class ToggleVerb : WFInfoVerb {
+            [Value(0, Required = true, MetaName = "event", HelpText = "The type of alert (day, night, nitain extract, orokin reactor, etc.)")]
+            public IEnumerable<string> Event { get; set; }
+
+            public override async Task Execute(Command cmd, IMessage message, string[] args) {
+                string @event = string.Join(" ", this.Event).Trim();
+                IGuild guild = message.GetGuild();
+                IRole role;
+                try {
+                    role = await WFInfoVerb.GetOrCreateRole(cmd, guild, @event).ConfigureAwait(false);
+                } catch {
+                    await message.Reply($"Unable to create role '{WFInfoVerb.GetRoleName(cmd, guild, @event)}'").ConfigureAwait(false);
+                    return;
+                }
+
+                IGuildUser user = await guild.GetUserAsync(message.Author.Id).ConfigureAwait(false);
+                try {
+                    if (user.RoleIds.Contains(role.Id)) {
+                        await user.RemoveRoleAsync(role).ConfigureAwait(false);
+                        await message.Reply("Role removed").ConfigureAwait(false);
+                    } else {
+                        await user.AddRoleAsync(role).ConfigureAwait(false);
+                        await message.Reply("Role assigned").ConfigureAwait(false);
+                    }
+                } catch {
+                    await message.Reply($"Unable to manage role '{role.Name}'").ConfigureAwait(false);
+                }
+            }
+        }
+
+        public abstract class WFInfoVerb : Verb {
+            public static IRole GetRole(Command cmd, IGuild guild, string @event) {
+                string name = WFInfoVerb.GetRoleName(cmd, guild, @event.ToLower());
+                return guild.Roles.FirstOrDefault(r => r.Name == name);
+            }
+
+            public static string GetRoleName(Command cmd, IGuild guild, string @event) {
+                return $"{cmd.Name}: {@event}";
+            }
+
+            public static async Task<IRole> GetOrCreateRole(Command cmd, IGuild guild, string @event) {
+                IRole role = WFInfoVerb.GetRole(cmd, guild, @event);
+                if (role == null) {
+                    role = await guild.CreateRoleAsync(WFInfoVerb.GetRoleName(cmd, guild, @event)).ConfigureAwait(false);
+                    await role.ModifyAsync(p => p.Mentionable = true).ConfigureAwait(false);
+                }
+
+                return role;
+            }
+
+            public static IEnumerable<IRole> GetRoles(Command cmd, IGuild guild, IEnumerable<WarframeExtensions.StackedItem> items) {
+                foreach (WarframeExtensions.StackedItem item in items) {
+                    string itemName = item.Type;
+                    string[] itemWords = itemName.Split(' ');
+
+                    IRole role = WFInfoVerb.GetRole(cmd, guild, itemName);
+                    if (role != null)
+                        yield return role;
+
+                    // Check if it's a blueprint
+                    string[] modifiedWords = itemWords.Where(word => !string.Equals(word, "blueprint", StringComparison.OrdinalIgnoreCase)).ToArray();
+                    if (itemWords.Length != modifiedWords.Length) {
+                        role = WFInfoVerb.GetRole(cmd, guild, string.Join(' ', modifiedWords));
+                        if (role != null) {
+                            yield return role;
+                        }
+                    }
+
+                    // Check if it's a wraith
+                    if (itemWords.Contains("wraith", StringComparer.OrdinalIgnoreCase)) {
+                        role = WFInfoVerb.GetRole(cmd, guild, "wraith");
+                        if (role != null) {
+                            yield return role;
+                        }
+                    }
+
+                    // Check if it's a vandal
+                    if (itemWords.Contains("vandal", StringComparer.OrdinalIgnoreCase)) {
+                        role = WFInfoVerb.GetRole(cmd, guild, "vandal");
+                        if (role != null) {
+                            yield return role;
+                        }
+                    }
+
+                    // Check if it's sheev
+                    if (itemWords.Contains("sheev", StringComparer.OrdinalIgnoreCase)) {
+                        role = WFInfoVerb.GetRole(cmd, guild, "sheev");
+                        if (role != null) {
+                            yield return role;
+                        }
+                    }
+
+                    // Check if it's a riven
+                    if (itemWords.Contains("riven", StringComparer.OrdinalIgnoreCase)) {
+                        role = WFInfoVerb.GetRole(cmd, guild, "riven");
+                        if (role != null) {
+                            yield return role;
+                        }
+                    }
+                }
+            }
+        }
         #endregion
 
         public class Storage : IConfig {
-            /// <summary>Key: channel ID, Value: message on alert</summary>
-            public Dictionary<ulong, string> CetusChannels { get; set; } = new Dictionary<ulong, string>();
-            /// <summary>Key: channel ID, Value: message on alert</summary>
-            public Dictionary<ulong, string> AlertChannels { get; set; } = new Dictionary<ulong, string>();
-            /// <summary>Key: channel ID, Value: message on alert</summary>
-            public Dictionary<ulong, string> InvasionChannels { get; set; } = new Dictionary<ulong, string>();
+            public HashSet<ulong> CetusChannels { get; set; } = new HashSet<ulong>();
+            public HashSet<ulong> AlertChannels { get; set; } = new HashSet<ulong>();
+            public HashSet<ulong> InvasionChannels { get; set; } = new HashSet<ulong>();
 
             /// <summary>A set of messages that are tracking a cetus day/night cycle</summary>
             public HashSet<TimedMessageInfo> CetusMessages { get; set; } = new HashSet<TimedMessageInfo>();

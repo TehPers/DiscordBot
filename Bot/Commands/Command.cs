@@ -3,11 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
-using System.Transactions;
 using CommandLine;
-using CommandLine.Text;
 using Discord;
 
 namespace Bot.Commands {
@@ -88,13 +85,18 @@ namespace Bot.Commands {
         /// <param name="guild">The guild</param>
         /// <param name="user">The user</param>
         /// <returns>Whether the user has permission</returns>
-        public virtual bool HasPermission(IGuild guild, IUser user) => true;
+        public virtual Task<bool> HasPermission(IGuild guild, IUser user) => Task.FromResult(true);
+
+        /// <summary>Whether the given user can use this command on the given guild</summary>
+        /// <param name="guild">The guild</param>
+        /// <returns>True if the user can use this command, false otherwise</returns>
+        public Task<bool> CanUse(IGuild guild) => Task.FromResult(this.IsEnabled(guild));
 
         /// <summary>Whether the given user can use this command on the given guild</summary>
         /// <param name="guild">The guild</param>
         /// <param name="user">The user</param>
         /// <returns>True if the user can use this command, false otherwise</returns>
-        public bool CanUse(IGuild guild, IUser user) => this.IsEnabled(guild) && this.HasPermission(guild, user);
+        public async Task<bool> CanUse(IGuild guild, IUser user) => this.IsEnabled(guild) && await this.HasPermission(guild, user).ConfigureAwait(false);
 
         /// <summary>Adds a verb to the command. If it is the only verb, it will be used implicitly.</summary>
         /// <typeparam name="T">The type of the verb</typeparam>
@@ -189,12 +191,20 @@ namespace Bot.Commands {
         /// <param name="guild">The guild</param>
         /// <param name="user">The user</param>
         /// <returns>The available commands</returns>
-        public static IEnumerable<Command> AvailableCommands(IGuild guild, IUser user) => Command.CommandRegistry.Values.Where(c => c.CanUse(guild, user));
+        public static async Task<IEnumerable<Command>> AvailableCommands(IGuild guild, IUser user) {
+            Task<Command>[] tasks = Command.CommandRegistry.Values.Select(c => c.CanUse(guild, user).ContinueWith(t => t.Result ? c : null)).ToArray();
+            Command[] cmds = await Task.WhenAll(tasks).ConfigureAwait(false);
+            return cmds.Where(c => c != null);
+        }
 
         /// <summary>Gets all the commands enabled on the given guild</summary>
         /// <param name="guild">The guild</param>
         /// <returns>The enabled commands</returns>
-        public static IEnumerable<Command> AvailableCommands(IGuild guild) => Command.CommandRegistry.Values.Where(c => c.IsEnabled(guild));
+        public static async Task<IEnumerable<Command>> AvailableCommands(IGuild guild) {
+            Task<Command>[] tasks = Command.CommandRegistry.Values.Select(c => c.CanUse(guild).ContinueWith(t => t.Result ? c : null)).ToArray();
+            Command[] cmds = await Task.WhenAll(tasks).ConfigureAwait(false);
+            return cmds.Where(c => c != null);
+        }
 
         /// <summary>Gets all the commands</summary>
         /// <returns>All registered commands</returns>
