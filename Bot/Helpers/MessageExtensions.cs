@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Bot.Commands;
 using Discord;
@@ -30,7 +31,12 @@ namespace Bot.Helpers {
             try {
                 return user == null ? null : await channel.SendMessageAsync(content, isTTS, embed, options).ConfigureAwait(false);
             } catch (HttpException ex) {
-                throw new UserMessageException(content, embed, ex, options, isTTS);
+                switch (ex.DiscordCode) {
+                    case 500013:
+                        return null;
+                    default:
+                        throw new UserMessageException(content, embed, ex, options, isTTS);
+                }
             }
         }
 

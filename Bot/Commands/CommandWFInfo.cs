@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -122,10 +123,10 @@ namespace Bot.Commands {
                 // Create new messages
                 Embed embed = CommandWFInfo.GetCetusEmbed().Build();
                 await Task.WhenAll(channels.Select(channel => {
-                    IRole role = WFInfoVerb.GetRole(this, channel.GetGuild(), day ? "day" : "night");
+                    IEnumerable<string> mentions = WFInfoVerb.GetRoles(this, channel.GetGuild(), day ? "day" : "night").Select(role => role.Mention);
 
                     // Send a new message
-                    return channel.SendMessageAsync(role?.Mention ?? "", embed: embed)
+                    return channel.SendMessageAsync(string.Join(" ", mentions), embed: embed)
 
                         // Track it
                         .ContinueWith(task => {
@@ -429,102 +430,116 @@ namespace Bot.Commands {
             public IEnumerable<string> Event { get; set; }
 
             public override async Task Execute(Command cmd, IMessage message, string[] args) {
-                string @event = string.Join(" ", this.Event).Trim();
+                string item = string.Join(" ", this.Event).Trim();
                 IGuild guild = message.GetGuild();
-                IRole role;
+
+                IRole[] roles;
                 try {
-                    role = await WFInfoVerb.GetOrCreateRole(cmd, guild, @event).ConfigureAwait(false);
+                    roles = (await WFInfoVerb.GetOrCreateRoles(cmd, guild, item).ConfigureAwait(false)).ToArray();
                 } catch {
-                    await message.Reply($"Unable to create role '{WFInfoVerb.GetRoleName(cmd, guild, @event)}'").ConfigureAwait(false);
+                    await message.Reply($"Unable to create role(s) for '{item}'").ConfigureAwait(false);
                     return;
+                }
+
+                if (!roles.Any()) {
+                    await message.Reply($"Unknown item {item}").ConfigureAwait(false);
                 }
 
                 IGuildUser user = await guild.GetUserAsync(message.Author.Id).ConfigureAwait(false);
                 try {
-                    if (user.RoleIds.Contains(role.Id)) {
-                        await user.RemoveRoleAsync(role).ConfigureAwait(false);
-                        await message.Reply("Role removed").ConfigureAwait(false);
-                    } else {
-                        await user.AddRoleAsync(role).ConfigureAwait(false);
-                        await message.Reply("Role assigned").ConfigureAwait(false);
-                    }
+                    IRole[] userRoles = user.RoleIds.Select(id => guild.GetRole(id)).ToArray();
+                    IRole[] addedRoles = roles.Except(userRoles).ToArray();
+                    IRole[] removedRoles = roles.Intersect(userRoles).ToArray();
+
+                    if (addedRoles.Any())
+                        await user.AddRolesAsync(addedRoles).ConfigureAwait(false);
+                    if (removedRoles.Any())
+                        await user.RemoveRolesAsync(removedRoles).ConfigureAwait(false);
+
+                    await message.Reply("Done").ConfigureAwait(false);
                 } catch {
-                    await message.Reply($"Unable to manage role '{role.Name}'").ConfigureAwait(false);
+                    await message.Reply($"Unable to manage role(s) for '{item}'").ConfigureAwait(false);
                 }
             }
         }
 
         public abstract class WFInfoVerb : Verb {
-            public static IRole GetRole(Command cmd, IGuild guild, string @event) {
-                string name = WFInfoVerb.GetRoleName(cmd, guild, @event.ToLower());
+            public static string[] Categories { get; } = {
+                "nitain",
+                "genetic",
+                "catalyst",
+                "reactor",
+                "forma",
+                "exilus",
+                "sheev",
+                "wraith",
+                "vandal",
+                "riven",
+                "day",
+                "night"
+            };
+
+            private static string GetRoleName(Command cmd, string category) {
+                return $"{cmd.Name}: {category}";
+            }
+
+            #region GetRoles
+            private static IRole InternalGetRoles(Command cmd, IGuild guild, string category) {
+                string name = WFInfoVerb.GetRoleName(cmd, category);
                 return guild.Roles.FirstOrDefault(r => r.Name == name);
             }
 
-            public static string GetRoleName(Command cmd, IGuild guild, string @event) {
-                return $"{cmd.Name}: {@event}";
+            public static IEnumerable<IRole> GetRoles(Command cmd, IGuild guild, IEnumerable<WarframeExtensions.StackedItem> items) => WFInfoVerb.GetRoles(cmd, guild, items.Select(i => i.Type));
+            public static IEnumerable<IRole> GetRoles(Command cmd, IGuild guild, IEnumerable<string> items) {
+                return items.SelectMany(i => WFInfoVerb.GetRoles(cmd, guild, i));
             }
 
-            public static async Task<IRole> GetOrCreateRole(Command cmd, IGuild guild, string @event) {
-                IRole role = WFInfoVerb.GetRole(cmd, guild, @event);
+            public static IEnumerable<IRole> GetRoles(Command cmd, IGuild guild, WarframeExtensions.StackedItem item) => WFInfoVerb.GetRoles(cmd, guild, item.Type);
+            public static IEnumerable<IRole> GetRoles(Command cmd, IGuild guild, string item) {
+                return WFInfoVerb.GetCategories(cmd, guild, item)
+                    .Select(roleName => WFInfoVerb.InternalGetRoles(cmd, guild, roleName))
+                    .Where(role => role != null);
+            }
+            #endregion
+
+            #region GetCategories
+            public static IEnumerable<string> GetCategories(Command cmd, IGuild guild, IEnumerable<WarframeExtensions.StackedItem> items) => WFInfoVerb.GetCategories(cmd, guild, items.Select(i => i.Type));
+            public static IEnumerable<string> GetCategories(Command cmd, IGuild guild, IEnumerable<string> items) {
+                return items.SelectMany(item => WFInfoVerb.GetCategories(cmd, guild, item));
+            }
+
+            public static IEnumerable<string> GetCategories(Command cmd, IGuild guild, WarframeExtensions.StackedItem item) => WFInfoVerb.GetCategories(cmd, guild, item.Type);
+            public static IEnumerable<string> GetCategories(Command cmd, IGuild guild, string item) {
+                return WFInfoVerb.Categories.Intersect(item.Split(), StringComparer.OrdinalIgnoreCase).Select(category => category.ToLower());
+            }
+            #endregion
+
+            #region GetOrCreateRole
+            private static async Task<IRole> GetOrCreateRole(Command cmd, IGuild guild, string category) {
+                IRole role = WFInfoVerb.InternalGetRoles(cmd, guild, category);
                 if (role == null) {
-                    role = await guild.CreateRoleAsync(WFInfoVerb.GetRoleName(cmd, guild, @event)).ConfigureAwait(false);
+                    role = await guild.CreateRoleAsync(WFInfoVerb.GetRoleName(cmd, category)).ConfigureAwait(false);
                     await role.ModifyAsync(p => p.Mentionable = true).ConfigureAwait(false);
                 }
 
                 return role;
             }
 
-            public static IEnumerable<IRole> GetRoles(Command cmd, IGuild guild, IEnumerable<WarframeExtensions.StackedItem> items) {
-                foreach (WarframeExtensions.StackedItem item in items) {
-                    string itemName = item.Type;
-                    string[] itemWords = itemName.Split(' ');
-
-                    IRole role = WFInfoVerb.GetRole(cmd, guild, itemName);
-                    if (role != null)
-                        yield return role;
-
-                    // Check if it's a blueprint
-                    string[] modifiedWords = itemWords.Where(word => !string.Equals(word, "blueprint", StringComparison.OrdinalIgnoreCase)).ToArray();
-                    if (itemWords.Length != modifiedWords.Length) {
-                        role = WFInfoVerb.GetRole(cmd, guild, string.Join(' ', modifiedWords));
-                        if (role != null) {
-                            yield return role;
-                        }
-                    }
-
-                    // Check if it's a wraith
-                    if (itemWords.Contains("wraith", StringComparer.OrdinalIgnoreCase)) {
-                        role = WFInfoVerb.GetRole(cmd, guild, "wraith");
-                        if (role != null) {
-                            yield return role;
-                        }
-                    }
-
-                    // Check if it's a vandal
-                    if (itemWords.Contains("vandal", StringComparer.OrdinalIgnoreCase)) {
-                        role = WFInfoVerb.GetRole(cmd, guild, "vandal");
-                        if (role != null) {
-                            yield return role;
-                        }
-                    }
-
-                    // Check if it's sheev
-                    if (itemWords.Contains("sheev", StringComparer.OrdinalIgnoreCase)) {
-                        role = WFInfoVerb.GetRole(cmd, guild, "sheev");
-                        if (role != null) {
-                            yield return role;
-                        }
-                    }
-
-                    // Check if it's a riven
-                    if (itemWords.Contains("riven", StringComparer.OrdinalIgnoreCase)) {
-                        role = WFInfoVerb.GetRole(cmd, guild, "riven");
-                        if (role != null) {
-                            yield return role;
-                        }
-                    }
-                }
+            public static Task<IEnumerable<IRole>> GetOrCreateRoles(Command cmd, IGuild guild, IEnumerable<WarframeExtensions.StackedItem> items) => WFInfoVerb.GetOrCreateRoles(cmd, guild, items.Select(i => i.Type));
+            public static Task<IEnumerable<IRole>> GetOrCreateRoles(Command cmd, IGuild guild, IEnumerable<string> items) {
+                return Task.WhenAll(items.Select(item => WFInfoVerb.GetOrCreateRoles(cmd, guild, item)))
+                    .ContinueWith(task => task.Result.SelectMany(roles => roles));
             }
+
+            public static Task<IEnumerable<IRole>> GetOrCreateRoles(Command cmd, IGuild guild, WarframeExtensions.StackedItem item) => WFInfoVerb.GetOrCreateRoles(cmd, guild, item.Type);
+            public static Task<IEnumerable<IRole>> GetOrCreateRoles(Command cmd, IGuild guild, string item) {
+                return WFInfoVerb.InternalGetOrCreateRoles(cmd, guild, WFInfoVerb.GetCategories(cmd, guild, item));
+            }
+
+            private static Task<IEnumerable<IRole>> InternalGetOrCreateRoles(Command cmd, IGuild guild, IEnumerable<string> categories) {
+                return Task.WhenAll(categories.Select(category => WFInfoVerb.GetOrCreateRole(cmd, guild, category))).ContinueWith(task => task.Result as IEnumerable<IRole>);
+            }
+            #endregion
         }
         #endregion
 
