@@ -52,12 +52,11 @@ namespace Bot.Commands {
         public override async Task Load() {
             // Prevent it from posting alerts as soon as the bot is reset
             WorldState state = await this._client.GetWorldStateAsync(CommandWFInfo.TrackedPlatform).ConfigureAwait(false);
-            /*foreach (Alert alert in state.WS_Alerts)
+            foreach (Alert alert in state.WS_Alerts)
                 this._trackedIDs.Add(alert.Id);
             foreach (Invasion invasion in state.WS_Invasions)
                 this._trackedIDs.Add(invasion.Id);
-                */
-            this._day = !CommandWFInfo.IsDay(DateTime.UtcNow);
+            this._day = CommandWFInfo.IsDay(DateTime.UtcNow);
 
             // Start tracking
             Bot.Instance.SecondsTimer.Elapsed += this.UpdateMessages;
