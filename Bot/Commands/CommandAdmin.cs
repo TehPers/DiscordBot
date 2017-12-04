@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Bot.Helpers;
+using Discord.Rest;
 
 namespace Bot.Commands {
     public class CommandAdmin : Command {
@@ -21,8 +22,9 @@ namespace Bot.Commands {
 
         protected override bool IsDefaultEnabled { get; } = true;
 
-        public override bool HasPermission(IGuild guild, IUser user) {
-            return user.Id == 247080708454088705UL;
+        public override async Task<bool> HasPermission(IGuild guild, IUser user) {
+            RestApplication info = await Bot.Instance.Client.GetApplicationInfoAsync().ConfigureAwait(false);
+            return user.Id == info.Owner.Id;
         }
 
         #region Verbs
