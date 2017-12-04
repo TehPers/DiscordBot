@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -10,6 +11,7 @@ using System.Timers;
 using Bot.Helpers;
 using CommandLine;
 using Discord;
+using Discord.Net;
 using Discord.WebSocket;
 using Newtonsoft.Json;
 using WarframeNET;
@@ -443,6 +445,7 @@ namespace Bot.Commands {
 
                 if (!roles.Any()) {
                     await message.Reply($"Unknown item {item}").ConfigureAwait(false);
+                    return;
                 }
 
                 IGuildUser user = await guild.GetUserAsync(message.Author.Id).ConfigureAwait(false);
@@ -456,8 +459,14 @@ namespace Bot.Commands {
                     if (removedRoles.Any())
                         await user.RemoveRolesAsync(removedRoles).ConfigureAwait(false);
 
-                    await message.Reply("Done").ConfigureAwait(false);
-                } catch {
+                    try {
+                        await message.Reply("Done").ConfigureAwait(false);
+                    } catch (HttpException) {
+                        if (message is IUserMessage userMsg) {
+                            await userMsg.AddReactionAsync(new Emoji("\u2705")).ConfigureAwait(false);
+                        }
+                    }
+                } catch (Exception ex) {
                     await message.Reply($"Unable to manage role(s) for '{item}'").ConfigureAwait(false);
                 }
             }

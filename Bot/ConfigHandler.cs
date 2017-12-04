@@ -218,6 +218,7 @@ namespace Bot {
                         serialized = JsonConvert.SerializeObject(this._config, Formatting.Indented, ConfigHandler.SerializerSettings);
 
                     byte[] data = Encoding.UTF8.GetBytes(serialized);
+                    stream.SetLength(0);
                     await stream.WriteAsync(data, 0, data.Length).ConfigureAwait(false);
                 }
             }
