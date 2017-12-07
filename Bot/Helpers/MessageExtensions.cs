@@ -9,8 +9,50 @@ using Discord.Net;
 
 namespace Bot.Helpers {
     public static class MessageExtensions {
+        public static RequestOptions DefaultOptions = new RequestOptions {
+            RetryMode  = RetryMode.AlwaysRetry
+        };
+
         public static Task<IUserMessage> Reply(this IMessage msg, string content) {
             return msg.Channel.SendMessageSafe($"{msg.Author.Mention} {content}");
+        }
+        
+        public static Task<IUserMessage> Reply(this IUserMessage msg, string content) => msg.Reply(content, ReplyStatus.NONE);
+        public static Task<IUserMessage> Reply(this IUserMessage msg, ReplyStatus status) => msg.Reply(null, status);
+        public static async Task<IUserMessage> Reply(this IUserMessage msg, string content, ReplyStatus status) {
+            IEmote reaction = null;
+            switch (status) {
+                case ReplyStatus.SUCCESS:
+                    reaction = new Emoji("\u2705");
+                    break;
+                case ReplyStatus.FAILURE:
+                    reaction = new Emoji("\u274E");
+                    break;
+                case ReplyStatus.INFO:
+                    break;
+                default:
+                    break;
+            }
+
+            // Send reaction if possible
+            if (reaction != null) {
+                try {
+                    await msg.AddReactionAsync(reaction).ConfigureAwait(false);
+                } catch (HttpException ex) {
+                    if (ex.DiscordCode == 50013) {
+                        // Missing Permissions
+                    } else {
+                        throw;
+                    }
+                }
+            }
+
+            // Send message if possible
+            if (content != null) {
+                return await msg.Author.SendMessageAsync($"{msg.Author.Mention} {content}").ConfigureAwait(false);
+            }
+
+            return null;
         }
 
         public static Task<IUserMessage[]> SendToAll(this IEnumerable<IMessageChannel> channels, string content) => channels.SendToAll(content, null, null, false);
@@ -28,15 +70,21 @@ namespace Bot.Helpers {
             IUser user = await channel.GetUserAsync(Bot.Instance.Client.CurrentUser.Id, options: options).ConfigureAwait(false);
 
             // Send the message
+            await channel.SendMessageAsync(content, isTTS, embed, options).ConfigureAwait(false);
+
             try {
                 return user == null ? null : await channel.SendMessageAsync(content, isTTS, embed, options).ConfigureAwait(false);
-            } catch (HttpException ex) {
+            }
+            catch (HttpException ex) {
                 switch (ex.DiscordCode) {
                     case 500013:
                         return null;
                     default:
                         throw new UserMessageException(content, embed, ex, options, isTTS);
                 }
+            }
+            catch (Exception ex) {
+                throw;
             }
         }
 
@@ -109,6 +157,13 @@ namespace Bot.Helpers {
                 this.Embed = embed;
                 this.Options = options;
             }
+        }
+
+        public enum ReplyStatus {
+            SUCCESS,
+            FAILURE,
+            INFO,
+            NONE
         }
     }
 }

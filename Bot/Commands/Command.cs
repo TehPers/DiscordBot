@@ -12,7 +12,7 @@ namespace Bot.Commands {
         public string Name { get; }
         protected CommandUsage Usage { get; }
         private readonly HashSet<Type> _verbs = new HashSet<Type>();
-        private Func<IMessage, string[], Task> _parseOptions;
+        private Func<IUserMessage, string[], Task> _parseOptions;
         protected Parser CommandParser { get; } = new Parser(settings => {
             settings.CaseInsensitiveEnumValues = true;
             settings.CaseSensitive = false;
@@ -37,7 +37,7 @@ namespace Bot.Commands {
         /// <param name="message">The message which executed this command</param>
         /// <param name="args">The arguments being passed to this message</param>
         /// <remarks>This automatically calls <see cref="Verb.Execute"/> for the appropriate verb</remarks>
-        public virtual Task Execute(IMessage message, IEnumerable<string> args) {
+        public virtual Task Execute(IUserMessage message, IEnumerable<string> args) {
             string[] argsArray = args as string[] ?? args.ToArray();
 
             if (this._parseOptions == null) {
@@ -158,7 +158,7 @@ namespace Bot.Commands {
         #endregion
 
         public abstract class Verb {
-            public abstract Task Execute(Command cmd, IMessage message, string[] args);
+            public abstract Task Execute(Command cmd, IUserMessage message, string[] args);
 
             public virtual bool IsEnabled(IMessage message) => this.IsEnabled(message.Channel, message.Author);
             public virtual bool IsEnabled(IChannel channel, IUser user) => true;

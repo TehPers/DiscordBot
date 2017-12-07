@@ -48,7 +48,7 @@ namespace Bot.Commands {
             [Value(0, Required = true, MetaName = "command", HelpText = "The local name of the command")]
             public string Cmd { get; set; }
 
-            public override async Task Execute(Command adminCmd, IMessage message, string[] args) {
+            public override async Task Execute(Command adminCmd, IUserMessage message, string[] args) {
                 IGuild guild = message.Channel.GetGuild();
 
                 // Get the command
@@ -83,7 +83,7 @@ namespace Bot.Commands {
 
         [Verb("list", HelpText = "Lists all commands, including disabled ones")]
         public class ListVerb : Verb {
-            public override Task Execute(Command cmd, IMessage message, string[] args) {
+            public override Task Execute(Command cmd, IUserMessage message, string[] args) {
                 return message.Reply(string.Join(", ", Command.AvailableCommands().Select(c => $"{c.GetName(message.GetGuild())} ({c.Name})")));
             }
         }
@@ -96,7 +96,7 @@ namespace Bot.Commands {
             [Value(0, MetaName = "prefix", HelpText = "The new prefix of the command. Leave this out to reset the prefix")]
             public string Prefix { get; set; }
 
-            public override async Task Execute(Command cmdAdmin, IMessage message, string[] args) {
+            public override async Task Execute(Command cmdAdmin, IUserMessage message, string[] args) {
                 ConfigHandler.ConfigWrapper<Bot.MainConfig> config = this.Global ? Bot.Instance.GetMainConfig() : Bot.Instance.GetMainConfig(message.Channel.GetGuild());
                 config.SetValue(c => c.Prefix = this.Prefix);
                 await config.Save().ConfigureAwait(false);
@@ -109,7 +109,7 @@ namespace Bot.Commands {
             [Value(0, MetaName = "nickname", Required = false, HelpText = "The new nickname for the bot. Leave empty to remove the nickname")]
             public string Nick { get; set; }
 
-            public override async Task Execute(Command cmd, IMessage message, string[] args) {
+            public override async Task Execute(Command cmd, IUserMessage message, string[] args) {
                 IGuildUser user = await message.GetGuild().GetCurrentUserAsync().ConfigureAwait(false);
                 await user.ModifyAsync(properties => properties.Nickname = this.Nick).ConfigureAwait(false);
                 if (this.Nick == null) {
@@ -122,7 +122,7 @@ namespace Bot.Commands {
 
         [Verb("avatar", HelpText = "Sets the bot's avatar")]
         public class AvatarVerb : Verb {
-            public override async Task Execute(Command cmd, IMessage message, string[] args) {
+            public override async Task Execute(Command cmd, IUserMessage message, string[] args) {
                 IAttachment attachment = message.Attachments.FirstOrDefault();
                 if (attachment == null) {
                     await message.Reply("You must attach an image to this command").ConfigureAwait(false);
@@ -158,7 +158,7 @@ namespace Bot.Commands {
             [Option('g', "global", Required = false, HelpText = "Modify the global config")]
             public bool Global { get; set; }
 
-            public override Task Execute(Command cmd, IMessage message, string[] args) {
+            public override Task Execute(Command cmd, IUserMessage message, string[] args) {
                 // TODO
                 return Task.CompletedTask;
             }

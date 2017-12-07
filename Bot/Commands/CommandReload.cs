@@ -18,7 +18,7 @@ namespace Bot.Commands {
             [Value(0, HelpText = "The commands to reload. If left out, all commands will be reloaded.", MetaName = "commands")]
             public IEnumerable<string> Cmds { get; set; }
 
-            public override Task Execute(Command cmd, IMessage message, string[] args) {
+            public override Task Execute(Command cmd, IUserMessage message, string[] args) {
                 List<Command> reloadList = new List<Command>();
 
                 List<string> reloadNames = new List<string>();

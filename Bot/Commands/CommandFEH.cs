@@ -146,7 +146,7 @@ namespace Bot.Commands {
             [Value(0, HelpText = "Search text", Required = true, MetaName = "query")]
             public IEnumerable<string> Query { get; set; }
 
-            public override Task Execute(Command cmd, IMessage message, string[] args) {
+            public override Task Execute(Command cmd, IUserMessage message, string[] args) {
                 if (!(cmd is CommandFEH cmdFEH))
                     return Task.CompletedTask;
                 if (cmdFEH._service == null)

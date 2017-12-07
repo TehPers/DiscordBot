@@ -138,14 +138,16 @@ namespace Bot {
         public async Task MessageReceivedAsync(SocketMessage msg) {
             if (msg.Author.IsBot || msg.Channel.GetGuild() == null)
                 return;
+            if (!(msg is IUserMessage userMsg))
+                return;
 
             try {
                 string prefix = msg.GetPrefix();
                 if (msg.Content.StartsWith(prefix)) {
-                    await this.CommandHandlerAsync(msg).ConfigureAwait(false);
+                    await this.CommandHandlerAsync(userMsg).ConfigureAwait(false);
                 }
             } catch (Exception ex) {
-                this.Log("An error occured while handing a message", LogSeverity.Error, exception: ex);
+                this.Log("An error occured while handing a message", LogSeverity.Error, ex);
             }
         }
 
@@ -169,7 +171,7 @@ namespace Bot {
             return Task.CompletedTask;
         }
 
-        public async Task CommandHandlerAsync(SocketMessage msg) {
+        public async Task CommandHandlerAsync(IUserMessage msg) {
             string rawCmd = msg.Content.Substring(msg.GetPrefix().Length).FixPunctuation();
             bool failed = false;
 
@@ -254,7 +256,7 @@ namespace Bot {
                 this.Log($"Failed to parse message: {msg.Content}", LogSeverity.Warning);
                 return;
             }
-            
+
             Command cmd = Command.GetCommand(msg.Channel.GetGuild(), cmdName);
             if (cmd != null) {
                 await cmd.Execute(msg, args).ConfigureAwait(false);

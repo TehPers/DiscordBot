@@ -15,6 +15,7 @@ using Discord.Net;
 using Discord.WebSocket;
 using Newtonsoft.Json;
 using WarframeNET;
+using static Bot.Helpers.MessageExtensions;
 
 namespace Bot.Commands {
     public class CommandWFInfo : Command, IDisposable {
@@ -297,8 +298,8 @@ namespace Bot.Commands {
 
         private async Task<WorldState> GetWorldState() {
             // Make sure this code only happens once
-            if (!await this._worldStateLock.WaitAsync(5000).ConfigureAwait(false))
-                throw new Exception("Timed out");
+            while (!await this._worldStateLock.WaitAsync(10000).ConfigureAwait(false))
+                Bot.Instance.Log("Stuck in CommandWFInfo.GetWorldState(), will keep waiting");
 
             // Update the world state if necessary
             if (DateTimeOffset.Now - this._lastWorldState >= CommandWFInfo.WorldStateRate) {
@@ -371,7 +372,7 @@ namespace Bot.Commands {
         #region Verbs
         [Verb("cetus", HelpText = "Displays current time in Cetus")]
         public class CetusVerb : WFInfoVerb {
-            public override async Task Execute(Command cmd, IMessage message, string[] args) {
+            public override async Task Execute(Command cmd, IUserMessage message, string[] args) {
                 Task task = Task.CompletedTask;
                 ConfigHandler.ConfigWrapper<Storage> config = cmd.GetConfig<Storage>(CommandWFInfo.ConfigName).SetValue(c => {
                     if (c.CetusChannels.Add(message.Channel.Id)) {
@@ -390,7 +391,7 @@ namespace Bot.Commands {
 
         [Verb("alerts", HelpText = "Displays Warframe alerts")]
         public class AlertsVerb : WFInfoVerb {
-            public override async Task Execute(Command cmd, IMessage message, string[] args) {
+            public override async Task Execute(Command cmd, IUserMessage message, string[] args) {
                 Task task = Task.CompletedTask;
                 ConfigHandler.ConfigWrapper<Storage> config = cmd.GetConfig<Storage>(CommandWFInfo.ConfigName).SetValue(c => {
                     if (c.AlertChannels.Add(message.Channel.Id)) {
@@ -409,7 +410,7 @@ namespace Bot.Commands {
 
         [Verb("invasions", HelpText = "Displays Warframe invasions")]
         public class InvasionsVerb : WFInfoVerb {
-            public override async Task Execute(Command cmd, IMessage message, string[] args) {
+            public override async Task Execute(Command cmd, IUserMessage message, string[] args) {
                 Task task = Task.CompletedTask;
                 ConfigHandler.ConfigWrapper<Storage> config = cmd.GetConfig<Storage>(CommandWFInfo.ConfigName).SetValue(c => {
                     if (c.InvasionChannels.Add(message.Channel.Id)) {
@@ -431,7 +432,7 @@ namespace Bot.Commands {
             [Value(0, Required = true, MetaName = "event", HelpText = "The type of alert (day, night, nitain extract, orokin reactor, etc.)")]
             public IEnumerable<string> Event { get; set; }
 
-            public override async Task Execute(Command cmd, IMessage message, string[] args) {
+            public override async Task Execute(Command cmd, IUserMessage message, string[] args) {
                 string item = string.Join(" ", this.Event).Trim();
                 IGuild guild = message.GetGuild();
 
@@ -439,12 +440,12 @@ namespace Bot.Commands {
                 try {
                     roles = (await WFInfoVerb.GetOrCreateRoles(cmd, guild, item).ConfigureAwait(false)).ToArray();
                 } catch {
-                    await message.Reply($"Unable to create role(s) for '{item}'").ConfigureAwait(false);
+                    await message.Reply($"Unable to create role(s) for '{item}'", ReplyStatus.FAILURE).ConfigureAwait(false);
                     return;
                 }
 
                 if (!roles.Any()) {
-                    await message.Reply($"Unknown item {item}").ConfigureAwait(false);
+                    await message.Reply($"Unknown item {item}", ReplyStatus.FAILURE).ConfigureAwait(false);
                     return;
                 }
 
@@ -458,17 +459,12 @@ namespace Bot.Commands {
                         await user.AddRolesAsync(addedRoles).ConfigureAwait(false);
                     if (removedRoles.Any())
                         await user.RemoveRolesAsync(removedRoles).ConfigureAwait(false);
-
-                    try {
-                        await message.Reply("Done").ConfigureAwait(false);
-                    } catch (HttpException) {
-                        if (message is IUserMessage userMsg) {
-                            await userMsg.AddReactionAsync(new Emoji("\u2705")).ConfigureAwait(false);
-                        }
-                    }
-                } catch (Exception ex) {
-                    await message.Reply($"Unable to manage role(s) for '{item}'").ConfigureAwait(false);
+                } catch {
+                    await message.Reply($"Unable to manage role(s) for '{item}'", ReplyStatus.FAILURE).ConfigureAwait(false);
+                    return;
                 }
+
+                await message.Reply(null, ReplyStatus.SUCCESS).ConfigureAwait(false);
             }
         }
 

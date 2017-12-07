@@ -18,7 +18,7 @@ namespace Bot.Commands {
             [Value(0, HelpText = "The name of the command", MetaName = "command")]
             public string Cmd { get; set; }
 
-            public override async Task Execute(Command helpCmd, IMessage message, string[] args) {
+            public override async Task Execute(Command helpCmd, IUserMessage message, string[] args) {
                 // Try to show command help
                 Command cmd = Command.GetCommand(message.GetGuild(), this.Cmd);
                 if (this.Cmd != null && cmd != null)
