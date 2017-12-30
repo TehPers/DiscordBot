@@ -23,7 +23,7 @@ namespace Bot.Helpers {
             IEmote reaction = null;
             switch (status) {
                 case ReplyStatus.SUCCESS:
-                    reaction = new Emoji("\u2705");
+                    reaction = new Emoji("\u2611");
                     break;
                 case ReplyStatus.FAILURE:
                     reaction = new Emoji("\u274E");
@@ -84,6 +84,23 @@ namespace Bot.Helpers {
                 }
             }
             catch (Exception ex) {
+                throw;
+            }
+        }
+        
+        public static Task ModifySafe(this IUserMessage message, Action<MessageProperties> func) => message.ModifySafe(func, null);
+        public static async Task ModifySafe(this IUserMessage message, Action<MessageProperties> func, RequestOptions options) {
+            try {
+                await message.ModifyAsync(func, options).ConfigureAwait(false);
+            } catch (HttpException ex) {
+                switch (ex.DiscordCode) {
+                    case 500013:
+                        return;
+                    default:
+                        Bot.Instance.Log("An error was thrown while modifying a message", LogSeverity.Error, ex);
+                        break;
+                }
+            } catch (Exception ex) {
                 throw;
             }
         }

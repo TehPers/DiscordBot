@@ -22,9 +22,11 @@ namespace Bot.Commands {
         public static string TrackedPlatform { get; } = Platform.PC;
         private const string ConfigName = "tracked";
 
-        private static readonly TimeSpan HistoryLength = new TimeSpan(days: 3, hours: 0, minutes: 0, seconds: 0);
+        private static readonly TimeSpan HistoryLength = new TimeSpan(days: 1, hours: 0, minutes: 0, seconds: 0);
         private static readonly Color ActiveColor = Color.DarkGreen;
         private static readonly Color ExpiredColor = Color.Red;
+        private static readonly Color DayColor = new Color(255, 255, 0); // Yellow
+        private static readonly Color NightColor = new Color(0, 0, 0); // Black
 
 #if DEBUG
         private const int CetusUpdateRate = 10;
@@ -96,9 +98,10 @@ namespace Bot.Commands {
             if (day == this._day) {
                 // Update messages
                 TimedMessageInfo[] messages = config.GetValue(c => c.CetusMessages.ToArray());
+                Embed embed = CommandWFInfo.GetCetusEmbed().Build();
                 foreach (TimedMessageInfo messageInfo in messages) {
                     if (await messageInfo.GetMessage().ConfigureAwait(false) is IUserMessage msg) {
-                        await msg.ModifyAsync(m => m.Embed = CommandWFInfo.GetCetusEmbed().Build()).ConfigureAwait(false);
+                        await msg.ModifySafe(m => m.Embed = embed).ConfigureAwait(false);
                     } else {
                         config.SetValue(c => c.CetusMessages.Remove(messageInfo));
                     }
@@ -159,7 +162,7 @@ namespace Bot.Commands {
                     if (await messageInfo.GetMessage().ConfigureAwait(false) is IUserMessage msg) {
                         await msg.DeleteAsync().ConfigureAwait(false);
                     } else {
-                        config.SetValue(c => c.CetusMessages.Remove(messageInfo));
+                        config.SetValue(c => c.AlertMessages.Remove(messageInfo));
                     }
                 } else if (messageInfo.ShouldExpire) {
                     // Make sure to modify the config properly
@@ -167,9 +170,9 @@ namespace Bot.Commands {
 
                     // Modify the message
                     if (await messageInfo.GetMessage().ConfigureAwait(false) is IUserMessage msg) {
-                        await msg.ModifyAsync(m => m.Embed = msg.Embeds.FirstOrDefault()?.AsBuilder().WithColor(CommandWFInfo.ExpiredColor).Build()).ConfigureAwait(false);
+                        await msg.ModifySafe(m => m.Embed = msg.Embeds.FirstOrDefault()?.AsBuilder().WithColor(CommandWFInfo.ExpiredColor).Build()).ConfigureAwait(false);
                     } else {
-                        config.SetValue(c => c.CetusMessages.Remove(messageInfo));
+                        config.SetValue(c => c.AlertMessages.Remove(messageInfo));
                     }
                 }
             }
@@ -230,8 +233,6 @@ namespace Bot.Commands {
                     // Delete the message
                     if (await messageInfo.GetMessage().ConfigureAwait(false) is IUserMessage msg) {
                         await msg.DeleteAsync().ConfigureAwait(false);
-                    } else {
-                        config.SetValue(c => c.CetusMessages.Remove(messageInfo));
                     }
                 } else if (!messageInfo.Expired) {
                     // Get the invasion
@@ -240,13 +241,16 @@ namespace Bot.Commands {
                     // Check if it's expired
                     if (invasion == null || Math.Abs(invasion.Completion) > 100) {
                         // Make sure to modify the config properly
-                        config.SetValue(c => messageInfo.Expired = true);
+                        config.SetValue(c => {
+                            messageInfo.Expired = true;
+                            messageInfo.DeleteTime = DateTimeOffset.UtcNow + CommandWFInfo.HistoryLength;
+                        });
 
                         // Modify the message
                         if (await messageInfo.GetMessage().ConfigureAwait(false) is IUserMessage msg) {
                             await msg.ModifyAsync(m => m.Embed = msg.Embeds.FirstOrDefault()?.AsBuilder().WithColor(CommandWFInfo.ExpiredColor).Build()).ConfigureAwait(false);
                         } else {
-                            config.SetValue(c => c.CetusMessages.Remove(messageInfo));
+                            config.SetValue(c => c.InvasionMessages.Remove(messageInfo));
                         }
                     }
                 }
@@ -322,7 +326,7 @@ namespace Bot.Commands {
             EmbedBuilder embed = new EmbedBuilder {
                 Title = $"{(day ? ":sunny:" : ":full_moon:")} Cetus",
                 Description = $"{(day ? "Day" : "Night")} time remaining: {CommandWFInfo.CycleTimeLeft(time).Format()}",
-                Color = CommandWFInfo.ActiveColor,
+                Color = day ? CommandWFInfo.DayColor : CommandWFInfo.NightColor,
                 Timestamp = time - CommandWFInfo.CycleTime(time)
             };
             return embed;

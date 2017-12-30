@@ -13,6 +13,8 @@ namespace Bot.Helpers {
         public static string WFExilus { get; } = "<:WFExilus:380292390998638592>";
         public static string WFGrineer { get; } = "<:WFGrineer:384570820191584256>";
         public static string WFCorpus { get; } = "<:WFCorpus:384571252343308288>";
+        public static string WFNitain { get; } = "<:WFNitain:395482544675487745>";
+        public static string WFRiven { get; } = "<:WFRiven:395482335795085322>";
 
         public static string Emotify(CountedItem item) => Emotes.Emotify(new WarframeExtensions.StackedItem(item));
         public static string Emotify(WarframeExtensions.StackedItem item) {
@@ -21,7 +23,7 @@ namespace Bot.Helpers {
                 return item.Count == 1 ? item.Type : $"{item.Count}x {item.Type}";
             if (emote.Value.currency)
                 return $"{item.Count}{emote.Value.emote}";
-            return $"{item.Count}x {emote.Value.emote}";
+            return $"{item.Count}x {emote.Value.emote}{item.Type}";
         }
 
         public static string Emotify(string item) {
@@ -32,27 +34,23 @@ namespace Bot.Helpers {
             if (item.Equals("credits", StringComparison.OrdinalIgnoreCase))
                 return (Emotes.WFCredits, true);
             if (item.Equals("endo", StringComparison.OrdinalIgnoreCase))
-                return (Emotes.WFPlatinum, true);
+                return (Emotes.WFEndo, true);
             if (item.Equals("plat", StringComparison.OrdinalIgnoreCase))
                 return (Emotes.WFPlatinum, true);
             if (item.Equals("platinum", StringComparison.OrdinalIgnoreCase))
                 return (Emotes.WFPlatinum, true);
-            if (item.Equals("orokin catalyst", StringComparison.OrdinalIgnoreCase))
+            if (item.Equals("nitain extract", StringComparison.OrdinalIgnoreCase))
+                return (Emotes.WFNitain, true);
+            if (item.IndexOf("catalyst", StringComparison.OrdinalIgnoreCase) != -1)
                 return (Emotes.WFCatalyst, false);
-            if (item.Equals("orokin catalyst blueprint", StringComparison.OrdinalIgnoreCase))
-                return (Emotes.WFCatalyst, false);
-            if (item.Equals("orokin reactor", StringComparison.OrdinalIgnoreCase))
+            if (item.IndexOf("reactor", StringComparison.OrdinalIgnoreCase) != -1)
                 return (Emotes.WFReactor, false);
-            if (item.Equals("orokin reactor blueprint", StringComparison.OrdinalIgnoreCase))
-                return (Emotes.WFReactor, false);
-            if (item.Equals("forma", StringComparison.OrdinalIgnoreCase))
+            if (item.IndexOf("forma", StringComparison.OrdinalIgnoreCase) != -1)
                 return (Emotes.WFForma, false);
-            if (item.Equals("forma blueprint", StringComparison.OrdinalIgnoreCase))
-                return (Emotes.WFForma, false);
-            if (item.Equals("exilus adapter", StringComparison.OrdinalIgnoreCase))
+            if (item.IndexOf("exilus", StringComparison.OrdinalIgnoreCase) != -1)
                 return (Emotes.WFExilus, false);
-            if (item.Equals("exilus adapter blueprint", StringComparison.OrdinalIgnoreCase))
-                return (Emotes.WFExilus, false);
+            if (item.IndexOf("riven", StringComparison.OrdinalIgnoreCase) != -1)
+                return (Emotes.WFRiven, true);
 
             return null;
         }

@@ -2,14 +2,20 @@
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Bot
-{
-    public class Program
-    {
-        public static void Main(string[] args) => new Program().MainAsync().Wait();
+namespace Bot {
+    public class Program {
+        public static void Main(string[] args) {
+            Program program = new Program();
+            while (program._running) {
+                try {
+                    program.MainAsync().Wait();
+                } catch (Exception ex) {
+                    Console.WriteLine($"FATAL: Bot crashed. Restarting it...\n{ex}");
+                }
+            }
+        }
 
-        public async Task MainAsync()
-        {
+        public async Task MainAsync() {
             Bot bot = new Bot();
             if (await bot.StartAsync().ConfigureAwait(false))
                 await this.ConsoleHandler().ConfigureAwait(false);
@@ -17,10 +23,8 @@ namespace Bot
                 Console.Read();
         }
 
-        public Task ConsoleHandler()
-        {
-            while (this._running)
-            {
+        public Task ConsoleHandler() {
+            while (this._running) {
                 string input = Console.ReadLine();
                 if (input == null)
                     continue;
@@ -30,8 +34,7 @@ namespace Bot
                 string[] args = components.Skip(1).ToArray();
 
                 // Add a way to send messages into channels and stuff
-                switch (cmd)
-                {
+                switch (cmd) {
                     case "exit":
                         this._running = false;
                         break;

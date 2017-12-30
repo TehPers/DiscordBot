@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Bot.Commands;
 using WarframeNET;
 
 namespace Bot.Helpers {
@@ -33,6 +34,8 @@ namespace Bot.Helpers {
 
         public static bool IsImportant(this StackedItem item) => WarframeExtensions.IsRewardImportant(item.Type);
         private static bool IsRewardImportant(string type) {
+            return CommandWFInfo.WFInfoVerb.Categories.Any(category => type.IndexOf(category, StringComparison.OrdinalIgnoreCase) != -1);
+            /*
             return string.Equals(type, "nitain extract", StringComparison.OrdinalIgnoreCase)
                    || string.Equals(type, "kavat genetic code", StringComparison.OrdinalIgnoreCase)
                    || string.Equals(type, "orokin catalyst", StringComparison.OrdinalIgnoreCase)
@@ -48,6 +51,7 @@ namespace Bot.Helpers {
                    || type.IndexOf("vandal", StringComparison.OrdinalIgnoreCase) != -1
                    || type.IndexOf("riven", StringComparison.OrdinalIgnoreCase) != -1
                 ;
+            */
         }
 
         public static bool IsTraderHere(this WorldState state) => state.WS_VoidTrader.StartTime >= state.Timestamp && state.WS_VoidTrader.EndTime < state.Timestamp;
