@@ -62,7 +62,7 @@ namespace Bot.Commands {
                 this._trackedIDs.Add(alert.Id);
             foreach (Invasion invasion in state.WS_Invasions)
                 this._trackedIDs.Add(invasion.Id);
-            this._day = CommandWFInfo.IsDay(DateTime.UtcNow);
+            this._day = this.IsDay(DateTime.UtcNow);
 
             // Start tracking
             Bot.Instance.SecondsTimer.Elapsed += this.UpdateMessages;
@@ -94,11 +94,11 @@ namespace Bot.Commands {
 
             // Cetus Day/Night
             DateTime now = DateTime.UtcNow;
-            bool day = CommandWFInfo.IsDay(now);
+            bool day = this.IsDay(now);
             if (day == this._day) {
                 // Update messages
                 TimedMessageInfo[] messages = config.GetValue(c => c.CetusMessages.ToArray());
-                Embed embed = CommandWFInfo.GetCetusEmbed().Build();
+                Embed embed = this.GetCetusEmbed().Build();
                 foreach (TimedMessageInfo messageInfo in messages) {
                     if (await messageInfo.GetMessage().ConfigureAwait(false) is IUserMessage msg) {
                         await msg.ModifySafe(m => m.Embed = embed).ConfigureAwait(false);
@@ -127,7 +127,7 @@ namespace Bot.Commands {
                     .ToArray();
 
                 // Create new messages
-                Embed embed = CommandWFInfo.GetCetusEmbed().Build();
+                Embed embed = this.GetCetusEmbed().Build();
                 await Task.WhenAll(channels.Select(channel => {
                     IEnumerable<string> mentions = WFInfoVerb.GetRoles(this, channel.GetGuild(), day ? "day" : "night").Select(role => role.Mention);
 
@@ -139,7 +139,7 @@ namespace Bot.Commands {
                             config.SetValue(c => c.CetusMessages.Add(new TimedMessageInfo {
                                 MessageID = task.Result.Id,
                                 ChannelID = task.Result.Channel.Id,
-                                DeleteTime = now + CommandWFInfo.CycleTimeLeft(now)
+                                DeleteTime = now + this.CycleTimeLeft(now)
                             }));
                         });
                 })).ConfigureAwait(false);
@@ -196,7 +196,7 @@ namespace Bot.Commands {
                     continue;
 
                 // Get the embed
-                EmbedBuilder embed = CommandWFInfo.GetAlertEmbed(alert);
+                EmbedBuilder embed = this.GetAlertEmbed(alert);
 
                 // Create new messages
                 await Task.WhenAll(channels.Select(channel => {
@@ -278,7 +278,7 @@ namespace Bot.Commands {
                     continue;
 
                 // Get the embed
-                EmbedBuilder embed = CommandWFInfo.GetInvasionEmbed(invasion);
+                EmbedBuilder embed = this.GetInvasionEmbed(invasion);
 
                 // Create new messages
                 await Task.WhenAll(channels.Select(channel => {
@@ -310,6 +310,7 @@ namespace Bot.Commands {
                 try {
                     this._lastWorldState = DateTimeOffset.Now;
                     this._worldState = await this._client.GetWorldStateAsync(CommandWFInfo.TrackedPlatform).ConfigureAwait(false);
+                    this.WFEpoch = this._worldState.WS_CetusCycle.expiry - (this._worldState.WS_CetusCycle.isDay ? CommandWFInfo.DayLength : CommandWFInfo.CycleLength);
                 } catch (Exception ex) {
                     Bot.Instance.Log("Failed to download Warframe world state", LogSeverity.Warning, ex);
                 }
@@ -319,20 +320,20 @@ namespace Bot.Commands {
             return this._worldState;
         }
 
-        private static EmbedBuilder GetCetusEmbed() => CommandWFInfo.GetCetusEmbed(DateTime.UtcNow);
-        private static EmbedBuilder GetCetusEmbed(DateTime time) {
-            bool day = CommandWFInfo.IsDay(time);
+        private EmbedBuilder GetCetusEmbed() => this.GetCetusEmbed(DateTime.UtcNow);
+        private EmbedBuilder GetCetusEmbed(DateTime time) {
+            bool day = this.IsDay(time);
 
             EmbedBuilder embed = new EmbedBuilder {
                 Title = $"{(day ? ":sunny:" : ":full_moon:")} Cetus",
-                Description = $"{(day ? "Day" : "Night")} time remaining: {CommandWFInfo.CycleTimeLeft(time).Format()}",
+                Description = $"{(day ? "Day" : "Night")} time remaining: {this.CycleTimeLeft(time).Format()}",
                 Color = day ? CommandWFInfo.DayColor : CommandWFInfo.NightColor,
-                Timestamp = time - CommandWFInfo.CycleTime(time)
+                Timestamp = time - this.CycleTime(time)
             };
             return embed;
         }
 
-        private static EmbedBuilder GetAlertEmbed(Alert alert) {
+        private EmbedBuilder GetAlertEmbed(Alert alert) {
             StringBuilder description = new StringBuilder();
             if (alert.Mission.IsNightmare)
                 description.AppendLine("**NIGHTMARE** (No Shields)");
@@ -352,7 +353,7 @@ namespace Bot.Commands {
             };
         }
 
-        private static EmbedBuilder GetInvasionEmbed(Invasion invasion) {
+        private EmbedBuilder GetInvasionEmbed(Invasion invasion) {
             EmbedBuilder embed = new EmbedBuilder {
                 Title = $"Invasion - {invasion.Node} - {invasion.DefendingFaction} vs. {invasion.AttackingFaction}",
                 Description = $"*{invasion.Description}*",
@@ -570,15 +571,15 @@ namespace Bot.Commands {
         }
 
         #region Cetus Time
-        public static DateTime WFEpoch { get; } = new DateTime(2017, 11, 15, 20, 33, 0, DateTimeKind.Utc);
-        public static TimeSpan DayLength { get; } = new TimeSpan(0, 100, 0);
-        public static TimeSpan NightLength { get; } = new TimeSpan(0, 50, 0);
-        public static TimeSpan CycleLength { get; } = CommandWFInfo.DayLength + CommandWFInfo.NightLength;
+        public DateTime WFEpoch { get; set; } = new DateTime(2017, 11, 15, 20, 33, 0, DateTimeKind.Utc);
+        public static readonly TimeSpan DayLength = new TimeSpan(0, 100, 0);
+        public static readonly TimeSpan NightLength = new TimeSpan(0, 50, 0);
+        public static readonly TimeSpan CycleLength = CommandWFInfo.DayLength + CommandWFInfo.NightLength;
 
-        private static bool IsDay(DateTime time) => CommandWFInfo.DayTime(time) < CommandWFInfo.DayLength;
-        private static TimeSpan DayTime(DateTime time) => TimeSpan.FromTicks((time - CommandWFInfo.WFEpoch).Ticks % CommandWFInfo.CycleLength.Ticks);
-        private static TimeSpan CycleTime(DateTime time) => CommandWFInfo.IsDay(time) ? CommandWFInfo.DayTime(time) : CommandWFInfo.DayTime(time) - CommandWFInfo.DayLength;
-        private static TimeSpan CycleTimeLeft(DateTime time) => (CommandWFInfo.IsDay(time) ? CommandWFInfo.DayLength : CommandWFInfo.CycleLength) - CommandWFInfo.DayTime(time);
+        private bool IsDay(DateTime time) => this.DayTime(time) < CommandWFInfo.DayLength;
+        private TimeSpan DayTime(DateTime time) => TimeSpan.FromTicks((time - this.WFEpoch).Ticks % CommandWFInfo.CycleLength.Ticks);
+        private TimeSpan CycleTime(DateTime time) => this.IsDay(time) ? this.DayTime(time) : this.DayTime(time) - CommandWFInfo.DayLength;
+        private TimeSpan CycleTimeLeft(DateTime time) => (this.IsDay(time) ? CommandWFInfo.DayLength : CommandWFInfo.CycleLength) - this.DayTime(time);
         #endregion
 
         public void Dispose() {
