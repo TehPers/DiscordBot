@@ -40,7 +40,7 @@ namespace Bot.Helpers {
             if (item.Equals("platinum", StringComparison.OrdinalIgnoreCase))
                 return (Emotes.WFPlatinum, true);
             if (item.Equals("nitain extract", StringComparison.OrdinalIgnoreCase))
-                return (Emotes.WFNitain, true);
+                return (Emotes.WFNitain, false);
             if (item.IndexOf("catalyst", StringComparison.OrdinalIgnoreCase) != -1)
                 return (Emotes.WFCatalyst, false);
             if (item.IndexOf("reactor", StringComparison.OrdinalIgnoreCase) != -1)
@@ -50,7 +50,7 @@ namespace Bot.Helpers {
             if (item.IndexOf("exilus", StringComparison.OrdinalIgnoreCase) != -1)
                 return (Emotes.WFExilus, false);
             if (item.IndexOf("riven", StringComparison.OrdinalIgnoreCase) != -1)
-                return (Emotes.WFRiven, true);
+                return (Emotes.WFRiven, false);
 
             return null;
         }

@@ -25,8 +25,8 @@ namespace Bot.Commands {
         private static readonly TimeSpan HistoryLength = new TimeSpan(days: 1, hours: 0, minutes: 0, seconds: 0);
         private static readonly Color ActiveColor = Color.DarkGreen;
         private static readonly Color ExpiredColor = Color.Red;
-        private static readonly Color DayColor = new Color(255, 255, 0); // Yellow
-        private static readonly Color NightColor = new Color(0, 0, 0); // Black
+        private static readonly Color DayColor = new Color(0xFBAE45);
+        private static readonly Color NightColor = new Color(0x1a202b);
 
 #if DEBUG
         private const int CetusUpdateRate = 10;
