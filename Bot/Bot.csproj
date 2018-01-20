@@ -14,7 +14,7 @@
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.1.1-beta" />
     <PackageReference Include="Discord.Net" Version="1.0.2" />
-    <PackageReference Include="Google.Apis.Sheets.v4" Version="1.30.0.1050" />
+    <PackageReference Include="Google.Apis.Sheets.v4" Version="1.32.0.1106" />
   </ItemGroup>
 
   <ItemGroup>
