@@ -1,11 +1,19 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.16
+VisualStudioVersion = 15.0.27130.2036
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bot", "Bot\Bot.csproj", "{1F49B966-32A2-4333-B7DC-86706C7CD4CB}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WarframeNET", "WarframeNET\WarframeNET.csproj", "{DA013B67-0BFE-4A78-8103-E9D7992EE982}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bot v2", "Bot v2\Bot v2.csproj", "{C4B28AD6-1080-4A5C-B57C-74F407851866}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WarframeModule", "WarframeModule\WarframeModule.csproj", "{D3A57974-D93A-46A7-BB0C-39FE45650163}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "Core\Core.csproj", "{B38ADE66-E545-46E4-9D6F-951168AC93F7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CoreTest", "CoreTest\CoreTest.csproj", "{68A4F98E-585A-42E0-B2A3-309BEA54F81A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +29,22 @@ Global
 		{DA013B67-0BFE-4A78-8103-E9D7992EE982}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DA013B67-0BFE-4A78-8103-E9D7992EE982}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DA013B67-0BFE-4A78-8103-E9D7992EE982}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4B28AD6-1080-4A5C-B57C-74F407851866}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4B28AD6-1080-4A5C-B57C-74F407851866}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4B28AD6-1080-4A5C-B57C-74F407851866}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4B28AD6-1080-4A5C-B57C-74F407851866}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D3A57974-D93A-46A7-BB0C-39FE45650163}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D3A57974-D93A-46A7-BB0C-39FE45650163}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D3A57974-D93A-46A7-BB0C-39FE45650163}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D3A57974-D93A-46A7-BB0C-39FE45650163}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B38ADE66-E545-46E4-9D6F-951168AC93F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B38ADE66-E545-46E4-9D6F-951168AC93F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B38ADE66-E545-46E4-9D6F-951168AC93F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B38ADE66-E545-46E4-9D6F-951168AC93F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{68A4F98E-585A-42E0-B2A3-309BEA54F81A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{68A4F98E-585A-42E0-B2A3-309BEA54F81A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{68A4F98E-585A-42E0-B2A3-309BEA54F81A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{68A4F98E-585A-42E0-B2A3-309BEA54F81A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
