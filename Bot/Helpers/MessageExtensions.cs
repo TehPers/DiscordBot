@@ -83,9 +83,6 @@ namespace Bot.Helpers {
                         throw new UserMessageException(content, embed, ex, options, isTTS);
                 }
             }
-            catch (Exception ex) {
-                throw;
-            }
         }
         
         public static Task ModifySafe(this IUserMessage message, Action<MessageProperties> func) => message.ModifySafe(func, null);
@@ -100,8 +97,6 @@ namespace Bot.Helpers {
                         Bot.Instance.Log("An error was thrown while modifying a message", LogSeverity.Error, ex);
                         break;
                 }
-            } catch (Exception ex) {
-                throw;
             }
         }
 

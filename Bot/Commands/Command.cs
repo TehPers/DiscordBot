@@ -185,6 +185,8 @@ namespace Bot.Commands {
             Command.RegisterCommand(new CommandFEH("stats", "heroes"));
             Command.RegisterCommand(new CommandFEH("skills", "skills"));
             Command.RegisterCommand(new CommandFEH("weapons", "weapons"));
+            Command.RegisterCommand(new CommandFEH("seals", "seals"));
+            Command.RegisterCommand(new CommandFEH("buildings", "buildings"));
         }
 
         /// <summary>Gets all the commands usable on the given guild by the given user</summary>
