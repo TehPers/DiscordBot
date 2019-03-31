@@ -323,15 +323,21 @@ namespace Bot.Commands {
         private EmbedBuilder GetCetusEmbed() => this.GetCetusEmbed(DateTime.UtcNow);
         private EmbedBuilder GetCetusEmbed(DateTime time) {
             bool day = this.IsDay(time);
-
-            EmbedBuilder embed = new EmbedBuilder {
+            return new EmbedBuilder {
                 Title = $"{(day ? ":sunny:" : ":full_moon:")} Cetus",
                 Description = $"{(day ? "Day" : "Night")} time remaining: {this.CycleTimeLeft(time).Format()}",
                 Color = day ? CommandWFInfo.DayColor : CommandWFInfo.NightColor,
                 Timestamp = time - this.CycleTime(time),
-                ThumbnailUrl = day ? "https://cdn.discordapp.com/attachments/221473298867814410/561734146737700868/TuskAerialCommander.png" : "https://cdn.discordapp.com/attachments/221473298867814410/561734144338559006/Teralyst.png"
+                ThumbnailUrl = GetThumbnailUrl()
             };
-            return embed;
+
+            string GetThumbnailUrl() {
+                if (day) {
+                    return "https://cdn.discordapp.com/attachments/221473298867814410/561734146737700868/TuskAerialCommander.png";
+                }
+
+                return "https://cdn.discordapp.com/attachments/221473298867814410/561734144338559006/Teralyst.png";
+            }
         }
 
         private EmbedBuilder GetAlertEmbed(Alert alert) {
@@ -350,8 +356,23 @@ namespace Bot.Commands {
                 Timestamp = alert.StartTime,
                 Footer = new EmbedFooterBuilder {
                     Text = (alert.EndTime - alert.StartTime).Format()
-                }
+                },
+                ThumbnailUrl = alert.Mission.Reward.ImportantRewards().Select(item => GetThumbnailUrl(item.Type)).FirstOrDefault(url => !(url is null))
             };
+
+            string GetThumbnailUrl(string item) {
+                if (item.IndexOf("catalyst", StringComparison.OrdinalIgnoreCase) != -1)
+                    return "https://cdn.discordapp.com/attachments/221473298867814410/561738682718224384/Orokin_Catalyst.png";
+                if (item.IndexOf("reactor", StringComparison.OrdinalIgnoreCase) != -1)
+                    return "https://cdn.discordapp.com/attachments/221473298867814410/561738685352116225/Orokin_Reactor.png";
+                if (item.IndexOf("forma", StringComparison.OrdinalIgnoreCase) != -1)
+                    return "https://cdn.discordapp.com/attachments/221473298867814410/561738682265239552/Forma2.png";
+                if (item.IndexOf("exilus", StringComparison.OrdinalIgnoreCase) != -1)
+                    return "https://cdn.discordapp.com/attachments/221473298867814410/561738677445853187/Exilus_Adapter.png";
+                if (item.IndexOf("riven", StringComparison.OrdinalIgnoreCase) != -1)
+                    return "https://cdn.discordapp.com/attachments/221473298867814410/561737875012714516/RivenVeiledMod.png";
+                return null;
+            }
         }
 
         private EmbedBuilder GetInvasionEmbed(Invasion invasion) {
@@ -359,7 +380,8 @@ namespace Bot.Commands {
                 Title = $"Invasion - {invasion.Node} - {invasion.DefendingFaction} vs. {invasion.AttackingFaction}",
                 Description = $"*{invasion.Description}*",
                 Color = CommandWFInfo.ActiveColor,
-                Timestamp = invasion.StartTime
+                Timestamp = invasion.StartTime,
+                ThumbnailUrl = GetThumbnailUrl()
             };
 
             // Defender rewards
@@ -373,6 +395,18 @@ namespace Bot.Commands {
                 embed.AddField(invasion.AttackingFaction, string.Join("\n", attackerRewards));
 
             return embed;
+
+            string GetThumbnailUrl() {
+                if (string.Equals(invasion.AttackingFaction, "grineer", StringComparison.OrdinalIgnoreCase)) {
+                    return "https://cdn.discordapp.com/attachments/221473298867814410/561737303949574175/FlameLancerAvatar.png";
+                }
+
+                if (string.Equals(invasion.AttackingFaction, "corpus")) {
+                    return "https://cdn.discordapp.com/attachments/221473298867814410/561736287267061791/CrewmanElite.png";
+                }
+
+                return "https://cdn.discordapp.com/attachments/221473298867814410/561741054252941318/latest.png";
+            }
         }
 
         #region Verbs
