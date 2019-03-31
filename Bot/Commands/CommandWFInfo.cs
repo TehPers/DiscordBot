@@ -328,7 +328,8 @@ namespace Bot.Commands {
                 Title = $"{(day ? ":sunny:" : ":full_moon:")} Cetus",
                 Description = $"{(day ? "Day" : "Night")} time remaining: {this.CycleTimeLeft(time).Format()}",
                 Color = day ? CommandWFInfo.DayColor : CommandWFInfo.NightColor,
-                Timestamp = time - this.CycleTime(time)
+                Timestamp = time - this.CycleTime(time),
+                ThumbnailUrl = day ? "https://cdn.discordapp.com/attachments/221473298867814410/561734146737700868/TuskAerialCommander.png" : "https://cdn.discordapp.com/attachments/221473298867814410/561734144338559006/Teralyst.png"
             };
             return embed;
         }
