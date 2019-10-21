@@ -42,6 +42,7 @@ namespace BotV2.Extensions
                 {
                     StringPrefixes = new[] { config?["CommandPrefix"] ?? "!" },
                     Services = serviceProvider,
+                    EnableDefaultHelp = false,
                 });
             });
 

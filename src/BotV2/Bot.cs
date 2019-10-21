@@ -30,8 +30,6 @@ namespace BotV2
             // Logging
             client.MessageCreated += args => this.LogEventAsync("Message", LogLevel.Trace, $"{args.Author.Username}: {args.Message.Content}");
             client.ClientErrored += args => this.LogEventAsync("Client", LogLevel.Error, $"An error occurred during {args.EventName}", args.Exception);
-            client.SocketOpened += () => this.LogEventAsync("Socket", LogLevel.Trace, "Socket connection opened");
-            client.SocketClosed += args => this.LogEventAsync("Socket", LogLevel.Trace, $"Socket connection closed: [{args.CloseCode}] {args.CloseMessage}");
             client.SocketErrored += args => this.LogEventAsync("Socket", LogLevel.Error, "Socket connection errored", args.Exception);
             client.GuildUnavailable += args => this.LogEventAsync("Discord", LogLevel.Warning, $"Guild became {(args.Unavailable ? "unavailable" : "available")}: {args.Guild.Name} ({args.Guild.Id})");
             client.UnknownEvent += args => this.LogEventAsync("Unknown", LogLevel.Information, $"An unknown event occurred: [{args.EventName}] {args.Json}");

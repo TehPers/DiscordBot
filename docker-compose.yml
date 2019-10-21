@@ -3,5 +3,4 @@ services:
   bot:
     build: .
     volumes:
-      - "/srv/docker/bot:/out/configs:ro"
-    restart: always
+      - "/srv/docker/bot:/out/Configs:ro"
