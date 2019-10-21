@@ -36,19 +36,24 @@ namespace BotV2.Services.FireEmblem
             };
         }
 
-        public async Task<IEnumerable<KeyValuePair<string, string>>> GetCharacter(string query)
+        public Task<IEnumerable<KeyValuePair<string, string>>> GetCharacter(string query)
         {
-            return await this.Get(this._configMonitor.CurrentValue.CharacterSheet, query);
+            return this.Get(this._configMonitor.CurrentValue.CharacterSheet, query);
         }
 
-        public async Task<IEnumerable<KeyValuePair<string, string>>> GetSkill(string query)
+        public Task<IEnumerable<KeyValuePair<string, string>>> GetSkill(string query)
         {
-            return await this.Get(this._configMonitor.CurrentValue.SkillSheet, query);
+            return this.Get(this._configMonitor.CurrentValue.SkillSheet, query);
         }
 
-        public async Task<IEnumerable<KeyValuePair<string, string>>> GetWeapon(string query)
+        public Task<IEnumerable<KeyValuePair<string, string>>> GetWeapon(string query)
         {
-            return await this.Get(this._configMonitor.CurrentValue.WeaponSheet, query);
+            return this.Get(this._configMonitor.CurrentValue.WeaponSheet, query);
+        }
+
+        public Task<IEnumerable<KeyValuePair<string, string>>> GetSeal(string query)
+        {
+            return this.Get(this._configMonitor.CurrentValue.SealsSheet, query);
         }
 
         private async Task<IEnumerable<KeyValuePair<string, string>>> Get(string sheetName, string query)

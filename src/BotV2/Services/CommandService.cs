@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using BotV2.Models;
 using DSharpPlus.CommandsNext;
+using DSharpPlus.Entities;
 using Microsoft.Extensions.Logging;
 
 namespace BotV2.Services
@@ -22,8 +23,18 @@ namespace BotV2.Services
 
             commands.CommandErrored += args =>
             {
-                this._logger.LogError(args.Exception, $"An error occurred while {args.Context.Member?.Username} ({args.Context.Member?.Id}) was executing {args.Command.QualifiedName}");
-                return Task.CompletedTask;
+                switch (args.Context)
+                {
+                    case { User: DiscordUser user, Command: Command memberCommand }:
+                        this._logger.LogError(args.Exception, $"An error occurred while {user.Username} ({user.Id}) was executing {memberCommand.QualifiedName}");
+                        return Task.CompletedTask;
+                    case { Command: Command nonMemberCommand }:
+                        this._logger.LogError(args.Exception, $"An error occurred while executing {nonMemberCommand.QualifiedName}");
+                        return Task.CompletedTask;
+                    default:
+                        this._logger.LogError(args.Exception, $"An error occurred while executing a command");
+                        return Task.CompletedTask;
+                }
             };
 
             commands.CommandExecuted += args =>

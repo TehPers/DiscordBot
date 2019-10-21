@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using BotV2.Extensions;
 using BotV2.Services;
 using BotV2.Services.FireEmblem;
 using DSharpPlus;
@@ -33,6 +34,12 @@ namespace BotV2.CommandModules.FireEmblem
             [RemainingText] [Description("Search text.")] string query
         )
         {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                await context.ShowHelp();
+                return;
+            }
+
             var results = await this._dataProvider.GetSkill(query);
             var embed = this.FormatResponse(results).Build();
             await context.RespondAsync(embed: embed);
@@ -45,6 +52,12 @@ namespace BotV2.CommandModules.FireEmblem
             [RemainingText] [Description("Search text.")] string query
         )
         {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                await context.ShowHelp();
+                return;
+            }
+
             var results = await this._dataProvider.GetCharacter(query);
             var embed = this.FormatResponse(results).Build();
             await context.RespondAsync(embed: embed);
@@ -57,7 +70,31 @@ namespace BotV2.CommandModules.FireEmblem
             [RemainingText] [Description("Search text.")] string query
         )
         {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                await context.ShowHelp();
+                return;
+            }
+
             var results = await this._dataProvider.GetWeapon(query);
+            var embed = this.FormatResponse(results).Build();
+            await context.RespondAsync(embed: embed);
+        }
+
+        [Command("seals")]
+        [Description("Searches FEH seals.")]
+        public async Task Seals(
+            CommandContext context,
+            [RemainingText] [Description("Search text.")] string query
+        )
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                await context.ShowHelp();
+                return;
+            }
+
+            var results = await this._dataProvider.GetSeal(query);
             var embed = this.FormatResponse(results).Build();
             await context.RespondAsync(embed: embed);
         }

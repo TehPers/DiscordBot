@@ -9,5 +9,7 @@
         public string SkillSheet { get; set; }
 
         public string WeaponSheet { get; set; }
+
+        public string SealsSheet { get; set; }
     }
 }

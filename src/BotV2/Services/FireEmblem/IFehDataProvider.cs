@@ -10,5 +10,7 @@ namespace BotV2.Services.FireEmblem
         Task<IEnumerable<KeyValuePair<string, string>>> GetSkill(string query);
 
         Task<IEnumerable<KeyValuePair<string, string>>> GetWeapon(string query);
+
+        Task<IEnumerable<KeyValuePair<string, string>>> GetSeal(string query);
     }
 }
