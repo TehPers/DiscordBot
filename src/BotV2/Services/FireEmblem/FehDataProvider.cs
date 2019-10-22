@@ -170,7 +170,7 @@ namespace BotV2.Services.FireEmblem
             return entries;
         }
 
-        private void Reload()
+        public void Reload()
         {
             this._cache.Clear();
         }

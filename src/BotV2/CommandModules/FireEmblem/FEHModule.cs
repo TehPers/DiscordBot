@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -14,6 +16,7 @@ using DSharpPlus.Entities;
 
 namespace BotV2.CommandModules.FireEmblem
 {
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public sealed class FehModule : BaseCommandModule
     {
         private static readonly Regex HexColorRegex = new Regex("#?(?:(?<r>[0-9a-fA-F]{2})(?<g>[0-9a-fA-F]{2})(?<b>[0-9a-fA-F]{2})|(?<r>[0-9a-fA-F])(?<g>[0-9a-fA-F])(?<b>[0-9a-fA-F]))");
@@ -24,6 +27,14 @@ namespace BotV2.CommandModules.FireEmblem
         {
             this._dataProvider = dataProvider ?? throw new ArgumentNullException(nameof(dataProvider));
             this._embedService = embedService ?? throw new ArgumentNullException(nameof(embedService));
+        }
+
+        [Command("reload")]
+        [Description("Reloads FEH data.")]
+        public Task Reload(CommandContext context)
+        {
+            this._dataProvider.Reload();
+            return context.RespondAsync("Data will be reloaded.");
         }
 
         [Command("skills")]
@@ -40,6 +51,7 @@ namespace BotV2.CommandModules.FireEmblem
                 return;
             }
 
+            await context.TriggerTypingAsync();
             var results = await this._dataProvider.GetSkill(query);
             var embed = this.FormatResponse(results).Build();
             await context.RespondAsync(embed: embed);
@@ -58,6 +70,7 @@ namespace BotV2.CommandModules.FireEmblem
                 return;
             }
 
+            await context.TriggerTypingAsync();
             var results = await this._dataProvider.GetCharacter(query);
             var embed = this.FormatResponse(results).Build();
             await context.RespondAsync(embed: embed);
@@ -76,6 +89,7 @@ namespace BotV2.CommandModules.FireEmblem
                 return;
             }
 
+            await context.TriggerTypingAsync();
             var results = await this._dataProvider.GetWeapon(query);
             var embed = this.FormatResponse(results).Build();
             await context.RespondAsync(embed: embed);
@@ -94,6 +108,7 @@ namespace BotV2.CommandModules.FireEmblem
                 return;
             }
 
+            await context.TriggerTypingAsync();
             var results = await this._dataProvider.GetSeal(query);
             var embed = this.FormatResponse(results).Build();
             await context.RespondAsync(embed: embed);
