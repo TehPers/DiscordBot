@@ -17,7 +17,7 @@ namespace BotV2
         private const bool Release = true;
 #endif
 
-        private static async Task Main(string[] args)
+        private static async Task Main()
         {
             Console.WriteLine("Bot V2");
 
@@ -45,7 +45,7 @@ namespace BotV2
             await Task.Delay(-1);
         }
 
-        private static bool LogError(ILogger logger, Exception ex, string message = null)
+        private static bool LogError(ILogger logger, Exception ex, string? message = null)
         {
             logger.LogError(ex, message);
             return true;
@@ -68,6 +68,9 @@ namespace BotV2
             services.AddSingleton<Bot>();
             services.AddDiscordClient(configuration.GetSection("Discord"));
             services.AddCommandHandler();
+
+            // Data
+            services.AddRedis();
 
             // Commands
             services.AddFireEmblem(configuration);

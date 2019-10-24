@@ -2,14 +2,14 @@
 {
     public class FehDataProviderConfig
     {
-        public string SheetId { get; set; }
+        public string? SheetId { get; set; }
 
-        public string CharacterSheet { get; set; }
+        public string? CharacterSheet { get; set; }
 
-        public string SkillSheet { get; set; }
+        public string? SkillSheet { get; set; }
 
-        public string WeaponSheet { get; set; }
+        public string? WeaponSheet { get; set; }
 
-        public string SealsSheet { get; set; }
+        public string? SealSheet { get; set; }
     }
 }

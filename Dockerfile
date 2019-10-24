@@ -1,6 +1,4 @@
 FROM mcr.microsoft.com/dotnet/core/runtime:3.0 AS runtime
-EXPOSE 443/tcp
-EXPOSE 50000-65535/udp
 
 # Restore NuGet packages
 FROM mcr.microsoft.com/dotnet/core/sdk:3.0 AS restore

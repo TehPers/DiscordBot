@@ -4,3 +4,16 @@ services:
     build: .
     volumes:
       - "/srv/docker/bot:/out/Configs:ro"
+    networks:
+      - dbnet
+    depends_on:
+      - redis
+  redis:
+    image: redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - "/srv/docker/redis:/data"
+    networks:
+      - dbnet
+networks:
+  dbnet:

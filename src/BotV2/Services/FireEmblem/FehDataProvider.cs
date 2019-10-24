@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BotV2.Exceptions;
 using BotV2.Models.FireEmblem;
 using DuoVia.FuzzyStrings;
 using Google.Apis.Sheets.v4;
@@ -38,22 +39,26 @@ namespace BotV2.Services.FireEmblem
 
         public Task<IEnumerable<KeyValuePair<string, string>>> GetCharacter(string query)
         {
-            return this.Get(this._configMonitor.CurrentValue.CharacterSheet, query);
+            var sheetName = this._configMonitor.CurrentValue.CharacterSheet ?? throw new InvalidOperationException("No character sheet name is configured");
+            return this.Get(sheetName, query);
         }
 
         public Task<IEnumerable<KeyValuePair<string, string>>> GetSkill(string query)
         {
-            return this.Get(this._configMonitor.CurrentValue.SkillSheet, query);
+            var sheetName = this._configMonitor.CurrentValue.SkillSheet ?? throw new InvalidOperationException("No skill sheet name is configured");
+            return this.Get(sheetName, query);
         }
 
         public Task<IEnumerable<KeyValuePair<string, string>>> GetWeapon(string query)
         {
-            return this.Get(this._configMonitor.CurrentValue.WeaponSheet, query);
+            var sheetName = this._configMonitor.CurrentValue.WeaponSheet ?? throw new InvalidOperationException("No weapon sheet name is configured");
+            return this.Get(sheetName, query);
         }
 
         public Task<IEnumerable<KeyValuePair<string, string>>> GetSeal(string query)
         {
-            return this.Get(this._configMonitor.CurrentValue.SealsSheet, query);
+            var sheetName = this._configMonitor.CurrentValue.SealSheet ?? throw new InvalidOperationException("No seal sheet name is configured");
+            return this.Get(sheetName, query);
         }
 
         private async Task<IEnumerable<KeyValuePair<string, string>>> Get(string sheetName, string query)
@@ -67,7 +72,7 @@ namespace BotV2.Services.FireEmblem
 
             // If no matches, guess
             var sortedEntries = from kv in sheetData
-                                let priority = kv.Key.Contains(query, StringComparison.OrdinalIgnoreCase) ? 0 : 1
+                                let priority = kv.Key.Contains(query, StringComparison.OrdinalIgnoreCase) ? 0 : query.Split(' ').Where(s => s.Any(char.IsLetter)).Any(s => kv.Key.Contains(s, StringComparison.OrdinalIgnoreCase)) ? 0.5 : 1
                                 let distance = query.LevenshteinDistance(kv.Key)
                                 orderby priority, distance
                                 select kv.Value;
@@ -110,15 +115,13 @@ namespace BotV2.Services.FireEmblem
             var spreadsheetData = await spreadsheetDataRequest.ExecuteAsync();
             if (spreadsheetData == null)
             {
-                // TODO: Create exception type
-                throw new NotImplementedException("The spreadsheet could not be loaded.");
+                throw new OperationFailedException("The spreadsheet could not be loaded.");
             }
 
             var sheet = spreadsheetData.Sheets.SingleOrDefault(s => string.Equals(s.Properties.Title, sheetName, StringComparison.OrdinalIgnoreCase));
             if (sheet == null)
             {
-                // TODO: Create exception type
-                throw new NotImplementedException($"The sheet '{sheetName}' was not found.");
+                throw new OperationFailedException($"The sheet '{sheetName}' was not found.");
             }
 
             // Request the full contents of the sheet
@@ -128,16 +131,14 @@ namespace BotV2.Services.FireEmblem
             var values = await request.ExecuteAsync();
             if (values.Values.Count == 0)
             {
-                // TODO: Create exception type
-                throw new NotImplementedException($"The sheet '{sheetName}' is empty.");
+                throw new OperationFailedException($"The sheet '{sheetName}' is empty.");
             }
 
             // Make sure the sheet isn't empty
-            var keys = values.Values[0].Skip(1).Select(k => k.ToString()).ToArray();
+            var keys = values.Values[0].Skip(1).Select(k => k.ToString() ?? string.Empty).ToArray();
             if (keys.Length == 0)
             {
-                // TODO: Create exception type
-                throw new NotImplementedException($"The sheet '{sheetName}' has no keys.");
+                throw new OperationFailedException($"The sheet '{sheetName}' has no keys.");
             }
 
             var entries = new Dictionary<string, IReadOnlyList<KeyValuePair<string, string>>>(StringComparer.OrdinalIgnoreCase);
@@ -157,7 +158,7 @@ namespace BotV2.Services.FireEmblem
                 var entryProperties = new List<KeyValuePair<string, string>>();
                 for (var i = 1; i < Math.Min(col.Count, keys.Length + 1); i++)
                 {
-                    entryProperties.Add(new KeyValuePair<string, string>(keys[i - 1], col[i].ToString()));
+                    entryProperties.Add(new KeyValuePair<string, string>(keys[i - 1], col[i].ToString() ?? string.Empty));
                 }
 
                 if (!entries.TryAdd(name, entryProperties))

@@ -1,6 +1,6 @@
 ﻿using DSharpPlus.Entities;
 
-namespace BotV2.Services
+namespace BotV2.Services.Commands
 {
     public class EmbedService
     {

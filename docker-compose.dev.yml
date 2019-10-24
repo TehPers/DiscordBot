@@ -1,0 +1,24 @@
+version: "3.3"
+services:
+  redis:
+    image: redis
+    command: ["redis-server", "--appendonly", "yes"]
+    hostname: redis
+    volumes:
+      - "./.data/redis:/data"
+    ports:
+      - "6379:6379"
+    networks:
+      - dbnet
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOST=redis
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - dbnet
+networks:
+  dbnet:

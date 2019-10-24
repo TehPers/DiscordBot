@@ -1,0 +1,11 @@
+.data/
+.vs/
+**/.vs/
+**/bin/
+**/obj/
+docker-compose.*
+Dockerfile
+README.md
+.gitignore
+.gitmodules
+LICENSE

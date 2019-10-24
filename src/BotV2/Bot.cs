@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using BotV2.Extensions;
 using BotV2.Services;
+using BotV2.Services.Commands;
 using DSharpPlus;
 using DSharpPlus.EventArgs;
 using Microsoft.Extensions.Logging;
@@ -38,7 +38,7 @@ namespace BotV2
             // client.MessageReceived += commandHandler.OnMessageReceived;
         }
 
-        private void DebugLoggerOnLogMessageReceived(object sender, DebugLogMessageEventArgs e)
+        private void DebugLoggerOnLogMessageReceived(object? sender, DebugLogMessageEventArgs e)
         {
             var level = e.Level switch
             {
@@ -72,16 +72,15 @@ namespace BotV2
             }
         }
 
-        private Task LogEventAsync(string eventName, LogLevel level, string message, Exception exception = null)
+        private Task LogEventAsync(string eventName, LogLevel level, string message, Exception? exception = null)
         {
             this.LogEvent(eventName, level, message, exception);
             return Task.CompletedTask;
         }
 
-        private void LogEvent(string eventName, LogLevel level, string message, Exception exception = null)
+        private void LogEvent(string eventName, LogLevel level, string message, Exception? exception = null)
         {
-            using var scope = this._logger.BeginScopeWithProperty("EventName", eventName);
-            this._logger.Log(level, exception, message);
+            this._logger.Log(level, exception, $"[{eventName}] {message}");
         }
     }
 }

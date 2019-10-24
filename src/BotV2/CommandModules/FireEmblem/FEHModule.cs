@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotV2.Extensions;
 using BotV2.Services;
+using BotV2.Services.Commands;
 using BotV2.Services.FireEmblem;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
