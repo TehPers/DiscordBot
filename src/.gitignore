@@ -1,7 +1,5 @@
 Bot/Secret
-Bot/Configs
 Bot/Logs
-appsettings.Debug.json
 .data/
 
 ## Ignore Visual Studio temporary files, build results, and

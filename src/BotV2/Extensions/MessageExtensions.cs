@@ -22,7 +22,7 @@ namespace BotV2.Extensions
             }
         }
 
-        public static async Task<bool> TryDeleteAsync(this DiscordMessage message, string reason = default)
+        public static async Task<bool> TryDeleteAsync(this DiscordMessage message, string? reason = default)
         {
             _ = message ?? throw new ArgumentNullException(nameof(message));
 

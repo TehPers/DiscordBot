@@ -61,6 +61,8 @@ namespace Warframe
         public void Dispose()
         {
             this._alertsProvider.Dispose();
+            this._invasionsProvider.Dispose();
+            this._cetusStatusProvider.Dispose();
         }
 
         private void OnMakingHttpRequest(HttpRequestEventArgs e)

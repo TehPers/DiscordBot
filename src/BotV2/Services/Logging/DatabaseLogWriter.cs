@@ -18,7 +18,7 @@ namespace BotV2.Services.Logging
         public DatabaseLogWriter(IDataService dataStore)
         {
             this._dataStore = dataStore ?? throw new ArgumentNullException(nameof(dataStore));
-            this._messageChannel = Channel.CreateUnbounded<LogEntry>(new UnboundedChannelOptions { SingleReader = true });
+            this._messageChannel = Channel.CreateUnbounded<LogEntry>(new UnboundedChannelOptions {SingleReader = true});
             this._disposeToken = new CancellationTokenSource();
             this._consumer = Task.Run(() => this.WriteMessages(this._disposeToken.Token));
         }
@@ -29,8 +29,10 @@ namespace BotV2.Services.Logging
             _ = category ?? throw new ArgumentNullException(nameof(category));
 
             // Should complete immediately
-            var entry = new LogEntry(logLevel, eventId, category, state, message);
-            while (!this._messageChannel.Writer.TryWrite(entry)) { }
+            var entry = new LogEntry(logLevel, eventId, category, state ?? new object(), message);
+            while (!this._messageChannel.Writer.TryWrite(entry))
+            {
+            }
         }
 
         private async Task WriteMessages(CancellationToken cancellation)
