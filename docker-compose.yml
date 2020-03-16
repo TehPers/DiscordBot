@@ -15,5 +15,6 @@ services:
       - dbnet
     depends_on:
       - redis
+    restart: on-failure
 networks:
   dbnet:
