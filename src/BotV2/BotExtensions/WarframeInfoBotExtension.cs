@@ -404,7 +404,7 @@ namespace BotV2.BotExtensions
             }
 
             // Attacker rewards
-            var attackerRewards = invasion.DefenderReward.Forward(this._infoService.GetImportantRewards).Forward(this._infoService.GetItemStrings).ToArray();
+            var attackerRewards = invasion.AttackerReward.Forward(this._infoService.GetImportantRewards).Forward(this._infoService.GetItemStrings).ToArray();
             if (attackerRewards.Any())
             {
                 embed.AddField(invasion.AttackingFaction, string.Join("\n", attackerRewards));
