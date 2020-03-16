@@ -7,6 +7,7 @@ using BotV2.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Warframe;
 
 namespace BotV2.Extensions
@@ -27,8 +28,10 @@ namespace BotV2.Extensions
             services.TryAddSingleton(serviceProvider =>
             {
                 var clientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+                var logger = serviceProvider.GetRequiredService<ILogger<WarframeClient>>();
                 return new WarframeClient(WarframePlatform.Pc, (uri, cancellation) =>
                 {
+                    logger.LogTrace($"Request: GET {uri}");
                     var client = clientFactory.CreateClient("warframe");
                     return client.GetAsync(uri, HttpCompletionOption.ResponseContentRead, cancellation);
                 });

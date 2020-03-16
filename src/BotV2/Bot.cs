@@ -25,7 +25,6 @@ namespace BotV2
             this._running = 0;
 
             // Logging
-            client.MessageCreated += args => this.LogEventAsync("Message", LogLevel.Trace, $"{args.Author.Username}: {args.Message.Content}");
             client.ClientErrored += args => this.LogEventAsync("Client", LogLevel.Error, $"An error occurred during {args.EventName}", args.Exception);
             client.SocketErrored += args => this.LogEventAsync("Socket", LogLevel.Error, "Socket connection errored", args.Exception);
             client.GuildUnavailable += args => this.LogEventAsync("Discord", LogLevel.Warning, $"Guild became {(args.Unavailable ? "unavailable" : "available")}: {args.Guild.Name} ({args.Guild.Id})");
