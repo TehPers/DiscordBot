@@ -1,5 +1,12 @@
 version: "3.3"
 services:
+  redis:
+    image: redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - "/srv/docker/redis:/data"
+    networks:
+      - dbnet
   bot:
     build: .
     volumes:
@@ -8,12 +15,5 @@ services:
       - dbnet
     depends_on:
       - redis
-  redis:
-    image: redis
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - "/srv/docker/redis:/data"
-    networks:
-      - dbnet
 networks:
   dbnet:

@@ -16,14 +16,21 @@ namespace BotV2.Services.Commands
 
         public async Task<bool> IsCommandEnabled(Command command, ulong guildId)
         {
-            var dataStore = await this._dataService.GetGuildStore(guildId);
-            return await dataStore.AddOrGet($"commands:{command.QualifiedName}:enabled", () => true);
+            var dataStore = this._dataService.GetGuildStore(guildId);
+            var resource = dataStore.GetObjectResource<bool>($"commands:{command.QualifiedName}:enabled");
+            if ((await resource.Get()).TryGetValue(out var enabled))
+            {
+                return enabled;
+            }
+
+            return true;
         }
 
-        public async Task SetCommandEnabled(Command command, ulong guildId, bool isEnabled)
+        public async Task SetCommandEnabled(Command command, ulong guildId, bool enabled)
         {
-            var dataStore = await this._dataService.GetGuildStore(guildId);
-            await dataStore.AddOrUpdate($"commands:{command.QualifiedName}:enabled", () => isEnabled, _ => isEnabled);
+            var dataStore = this._dataService.GetGuildStore(guildId);
+            var resource = dataStore.GetObjectResource<bool>($"commands:{command.QualifiedName}:enabled");
+            await resource.Set(enabled);
         }
     }
 }

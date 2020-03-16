@@ -19,6 +19,12 @@ namespace BotV2.Models
             return this.HasValue;
         }
 
+        public Option<T> Where(Func<T, bool> predicate)
+        {
+            _ = predicate ?? throw new ArgumentNullException(nameof(predicate));
+            return this.HasValue && predicate(this._value) ? this : default;
+        }
+
         public Option<T2> Select<T2>(Func<T, T2> transform)
         {
             _ = transform ?? throw new ArgumentNullException(nameof(transform));

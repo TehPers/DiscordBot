@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Threading.Tasks;
-using BotV2.Services.Data.Connection;
+using BotV2.Services.Data.Database;
 using DSharpPlus.CommandsNext;
 using Newtonsoft.Json;
 
@@ -11,34 +10,30 @@ namespace BotV2.Services.Data
         private readonly IDatabaseFactory _dbFactory;
         private readonly JsonSerializer _serializer;
 
-        public DataService(IDatabaseFactory dbFactory)
+        public DataService(IDatabaseFactory dbFactory, JsonSerializer serializer)
         {
             this._dbFactory = dbFactory ?? throw new ArgumentNullException(nameof(dbFactory));
-            this._serializer = JsonSerializer.CreateDefault();
+            this._serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         }
 
-        public async Task<IKeyValueDataStore> GetGlobalStore()
+        public IKeyValueDataStore GetGlobalStore()
         {
-            var db = await this._dbFactory.GetDatabase();
-            return new RedisDataStore(db, this._serializer, ":global");
+            return new RedisDataStore(this._dbFactory, this._serializer, ":global");
         }
 
-        public async Task<ICommandDataStore> GetCommandStore(Command command)
+        public ICommandDataStore GetCommandStore(Command command)
         {
-            var db = await this._dbFactory.GetDatabase();
-            return new CommandDataStore(db, this._serializer, $":commands:{command.QualifiedName}");
+            return new CommandDataStore(this._dbFactory, this._serializer, $":commands:{command.QualifiedName}");
         }
 
-        public async Task<IGuildDataStore> GetGuildStore(ulong id)
+        public IGuildDataStore GetGuildStore(ulong id)
         {
-            var db = await this._dbFactory.GetDatabase();
-            return new GuildDataStore(db, this._serializer, $":guilds:{id}");
+            return new GuildDataStore(this._dbFactory, this._serializer, $":guilds:{id}");
         }
 
-        public async Task<IKeyValueDataStore> GetUserStore(ulong id)
+        public IKeyValueDataStore GetUserStore(ulong id)
         {
-            var db = await this._dbFactory.GetDatabase();
-            return new RedisDataStore(db, this._serializer, $":users:{id}");
+            return new RedisDataStore(this._dbFactory, this._serializer, $":users:{id}");
         }
     }
 }

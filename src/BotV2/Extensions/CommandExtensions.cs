@@ -17,13 +17,13 @@ namespace BotV2.Extensions
             _ = command ?? throw new ArgumentNullException(nameof(command));
             _ = context ?? throw new ArgumentNullException(nameof(context));
 
-            var invocation = $"help {command.Name}";
+            var invocation = $"help {command.QualifiedName}";
             if (!(context.CommandsNext.FindCommand(invocation, out var helpArgs) is { } helpCmd))
             {
                 throw new InvalidOperationException("No help command defined");
             }
 
-            var prefix = $"{context.User.Mention} ";
+            var prefix = context.User != null ? $"{context.User.Mention} " : string.Empty;
             var newContext = context.CommandsNext.CreateFakeContext(context.User, context.Channel, $"{prefix}{invocation}", prefix, helpCmd, helpArgs);
             return context.CommandsNext.ExecuteCommandAsync(newContext);
         }

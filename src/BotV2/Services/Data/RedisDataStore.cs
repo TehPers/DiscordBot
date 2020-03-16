@@ -1,23 +1,27 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
+using BotV2.Services.Data.Database;
+using BotV2.Services.Data.Resources;
+using BotV2.Services.Data.Resources.DelayedTaskQueues;
+using BotV2.Services.Data.Resources.HashTables;
+using BotV2.Services.Data.Resources.Lists;
+using BotV2.Services.Data.Resources.Objects;
+using BotV2.Services.Data.Resources.Sets;
+using BotV2.Services.Data.Resources.SortedSets;
 using Newtonsoft.Json;
-using StackExchange.Redis;
 
 namespace BotV2.Services.Data
 {
     [SuppressMessage("ReSharper", "HeuristicUnreachableCode", Justification = "ReSharper is wrong")]
     public class RedisDataStore : IKeyValueDataStore
     {
-        protected IDatabaseAsync Db { get; }
+        protected IDatabaseFactory DbFactory { get; }
         protected JsonSerializer Serializer { get; }
         protected string RootKey { get; }
 
-        public RedisDataStore(IDatabaseAsync db, JsonSerializer serializer, string rootKey)
+        public RedisDataStore(IDatabaseFactory dbFactory, JsonSerializer serializer, string rootKey)
         {
-            this.Db = db;
+            this.DbFactory = dbFactory;
             this.Serializer = serializer;
             this.RootKey = rootKey;
         }
@@ -28,176 +32,34 @@ namespace BotV2.Services.Data
             return subKey == string.Empty ? this.RootKey : $"{this.RootKey}:values:{subKey}";
         }
 
-        // private async Task<IAsyncDisposable> AcquireLock(string key, TimeSpan expiry)
-        // {
-        //     _ = key ?? throw new ArgumentNullException(nameof(key));
-        // 
-        //     var lockKey = $"/locks/{key}";
-        //     var instanceId = Guid.NewGuid();
-        //     while (!await this.Db.LockTakeAsync(lockKey, instanceId.ToString(), expiry)) { }
-        // 
-        //     return new RedisLockReservation(this.Db, lockKey, instanceId);
-        // }
-
-        public async Task<T> AddOrGet<T>(string key, Func<T> addFactory)
+        public IObjectResource<T> GetObjectResource<T>(string key)
         {
-            _ = addFactory ?? throw new ArgumentNullException(nameof(addFactory));
-            _ = key ?? throw new ArgumentNullException(nameof(key));
-
-            var fullKey = this.GetFullResourceKey(key);
-            var added = new Lazy<T>(addFactory);
-            var addedSerialized = new Lazy<Task<string>>(async () =>
-            {
-                await using var writer = new StringWriter();
-                using var jsonWriter = new JsonTextWriter(writer);
-                this.Serializer.Serialize(jsonWriter, added.Value);
-                return writer.ToString();
-            });
-
-            // Try until success - this should only repeat if the value changes mid-operation
-            while (true)
-            {
-                // Try to get the value
-                if (await this.Db.StringGetAsync(fullKey) is { HasValue: true } curValue)
-                {
-                    using var reader = new StringReader(curValue);
-                    using var jsonReader = new JsonTextReader(reader);
-                    return this.Serializer.Deserialize<T>(jsonReader);
-                }
-
-                // Set the value if it doesn't exist
-                var value = await addedSerialized.Value;
-                if (await this.Db.StringSetAsync(fullKey, value, when: When.NotExists))
-                {
-                    return added.Value;
-                }
-
-                // Database was modified, so restart this operation
-            }
+            return new RedisObjectResource<T>(this.DbFactory, this.GetFullResourceKey(key), this.Serializer);
         }
 
-        public async Task<T> AddOrUpdate<T>(string key, Func<T> addFactory, Func<T, T> updateFactory)
+        public IUnlockedDelayedTaskQueueResource<T> GetDelayedTaskQueueResource<T>(string key)
         {
-            _ = updateFactory ?? throw new ArgumentNullException(nameof(updateFactory));
-            _ = addFactory ?? throw new ArgumentNullException(nameof(addFactory));
-            _ = key ?? throw new ArgumentNullException(nameof(key));
-
-            var fullKey = this.GetFullResourceKey(key);
-            var added = new Lazy<T>(addFactory);
-            var addedSerialized = new Lazy<Task<string>>(async () =>
-            {
-                await using var writer = new StringWriter();
-                using var jsonWriter = new JsonTextWriter(writer);
-                this.Serializer.Serialize(jsonWriter, added.Value);
-                return writer.ToString();
-            });
-
-            // Try until success - this should only repeat if the value changes mid-operation
-            while (true)
-            {
-                // Try to get the value
-                if (await this.Db.StringGetAsync(fullKey) is { HasValue: true } prevSerialized)
-                {
-                    await using (await this.Reserve<T>(key, TimeSpan.FromSeconds(30)))
-                    {
-                        // Verify the string's value hasn't changed
-                        if (await this.Db.StringGetAsync(fullKey) is { HasValue: true } != prevSerialized)
-                        {
-                            continue;
-                        }
-
-                        // Deserialize the previous value
-                        using var prevValueReader = new StringReader(prevSerialized);
-                        using var prevValueJsonReader = new JsonTextReader(prevValueReader);
-                        var prevValue = this.Serializer.Deserialize<T>(prevValueJsonReader);
-
-                        // Create and serialize the new value
-                        var newValue = updateFactory(prevValue);
-                        await using var newValueWriter = new StringWriter();
-                        using var newValueJsonWriter = new JsonTextWriter(newValueWriter);
-                        this.Serializer.Serialize(newValueJsonWriter, newValue);
-
-                        // Set the value
-                        await this.Db.StringSetAsync(fullKey, newValueWriter.ToString(), flags: CommandFlags.FireAndForget);
-                        return newValue;
-                    }
-                }
-
-                // Set the value if it doesn't exist
-                var value = await addedSerialized.Value;
-                if (await this.Db.StringSetAsync(fullKey, value, when: When.NotExists))
-                {
-                    return added.Value;
-                }
-            }
+            return new RedisUnlockedDelayedTaskQueueResource<T>(this.DbFactory, this.GetFullResourceKey(key), this.Serializer);
         }
 
-        public async Task<(bool success, T value)> TryGet<T>(string key)
+        public IListResource<T> GetListResource<T>(string key)
         {
-            _ = key ?? throw new ArgumentNullException(nameof(key));
-
-            var fullKey = this.GetFullResourceKey(key);
-            if (!(await this.Db.StringGetAsync(fullKey) is { HasValue: true } curRaw))
-            {
-                return (false, default);
-            }
-
-            using var reader = new StringReader(curRaw);
-            using var jsonReader = new JsonTextReader(reader);
-            var cur = this.Serializer.Deserialize<T>(jsonReader);
-            return (true, cur);
+            return new RedisListResource<T>(this.DbFactory, this.GetFullResourceKey(key), this.Serializer);
         }
 
-        public async Task Set<T>(string key, T value)
+        public IUnlockedSetResource<T> GetSetResource<T>(string key)
         {
-            _ = key ?? throw new ArgumentNullException(nameof(key));
-
-            var fullKey = this.GetFullResourceKey(key);
-            await using var writer = new StringWriter();
-            using var jsonWriter = new JsonTextWriter(writer);
-            this.Serializer.Serialize(jsonWriter, value);
-            await this.Db.StringSetAsync(fullKey, writer.ToString(), flags: CommandFlags.FireAndForget);
+            return new RedisUnlockedSetResource<T>(this.DbFactory, this.GetFullResourceKey(key), this.Serializer);
         }
 
-        public async Task<IValueReservation<T>> Reserve<T>(string key, TimeSpan expiry)
+        public IUnlockedSortedSetResource<T> GetSortedSetResource<T>(string key) where T : IScored
         {
-            var resourceKey = this.GetFullResourceKey(key);
-            var lockKey = $"/locks/{key}";
-            var instanceId = Guid.NewGuid();
-
-            while (!await this.Db.LockTakeAsync(lockKey, instanceId.ToString(), expiry))
-            {
-                await Task.Delay(100);
-            }
-
-            return new ValueReservation<T>(this.Db, resourceKey, lockKey, instanceId, this.Serializer);
+            return new RedisUnlockedSortedSetResource<T>(this.DbFactory, this.GetFullResourceKey(key), this.Serializer);
         }
 
-        private class RedisLockReservation : IAsyncDisposable
+        public IHashTableResource<T> GetTableResource<T>(string key)
         {
-            private readonly IDatabaseAsync _db;
-            private readonly string _lockKey;
-            private readonly Guid _instanceId;
-            private int _disposed;
-
-            public RedisLockReservation(IDatabaseAsync db, string lockKey, Guid instanceId)
-            {
-                this._db = db ?? throw new ArgumentNullException(nameof(db));
-                this._lockKey = lockKey ?? throw new ArgumentNullException(nameof(lockKey));
-                this._instanceId = instanceId;
-                this._disposed = 1;
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-                if (Interlocked.Exchange(ref this._disposed, 1) == 0)
-                {
-                    if (!await this._db.LockReleaseAsync(this._lockKey, this._instanceId.ToString()))
-                    {
-                        throw new TimeoutException("The lock timed out before being released");
-                    }
-                }
-            }
+            return new RedisHashTableResource<T>(this.DbFactory, this.GetFullResourceKey(key), this.Serializer);
         }
     }
 }

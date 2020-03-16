@@ -14,12 +14,19 @@
     <PackageReference Include="DSharpPlus" Version="4.0.0-nightly-00625" />
     <PackageReference Include="DSharpPlus.CommandsNext" Version="4.0.0-nightly-00625" />
     <PackageReference Include="FuzzyStrings.NetStandard" Version="1.0.1" />
-    <PackageReference Include="Google.Apis.Sheets.v4" Version="1.41.1.1743" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="3.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="3.0.0" />
+    <PackageReference Include="Google.Apis.Sheets.v4" Version="1.44.1.1895" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="3.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="3.1.2" />
     <PackageReference Include="StackExchange.Redis" Version="2.0.601" />
+    <PackageReference Include="System.Linq.Async" Version="4.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Warframe.NET\src\Warframe.World\Warframe.World.csproj" />
+    <ProjectReference Include="..\..\Warframe.NET\src\Warframe\Warframe.csproj" />
   </ItemGroup>
 
   <ItemGroup>

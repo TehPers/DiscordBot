@@ -71,13 +71,21 @@ namespace BotV2.Services.FireEmblem
             }
 
             // If no matches, guess
-            var sortedEntries = from kv in sheetData
-                                let priority = kv.Key.Contains(query, StringComparison.OrdinalIgnoreCase) ? 0 : query.Split(' ').Where(s => s.Any(char.IsLetter)).Any(s => kv.Key.Contains(s, StringComparison.OrdinalIgnoreCase)) ? 0.5 : 1
-                                let distance = query.LevenshteinDistance(kv.Key)
-                                orderby priority, distance
-                                select kv.Value;
+            var queryWords = query.Split(' ').Where(s => s.Any(char.IsLetter)).Select(word => word.ToUpperInvariant()).ToHashSet();
+            int GetMatchedWords(string key)
+            {
+                var words = key.Split(' ').Where(s => s.Any(char.IsLetter));
+                return words.Count(word => queryWords.Contains(word.ToUpperInvariant()));
+            }
 
-            return sortedEntries.FirstOrDefault();
+            // First sort by number of matched words, then sort by distance
+            var sortedEntries = from kv in sheetData
+                                let matchedWords = GetMatchedWords(kv.Key)
+                                let distance = query.LevenshteinDistance(kv.Key)
+                                orderby matchedWords descending, distance
+                                select (key: kv.Key, value: kv.Value, matchedWords, distance);
+
+            return sortedEntries.FirstOrDefault().value;
         }
 
         private async Task<IReadOnlyDictionary<string, IReadOnlyList<KeyValuePair<string, string>>>> GetRawData(string sheetName)

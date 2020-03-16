@@ -5,6 +5,12 @@ VisualStudioVersion = 16.0.29001.49
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BotV2", "BotV2\BotV2.csproj", "{A94956E6-6D62-4059-A11B-E31C76878483}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ArgsParser", "ArgsParser\ArgsParser.csproj", "{8BC7DABA-74F0-43DA-8D7E-159ABE62FDC2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Warframe", "..\Warframe.NET\src\Warframe\Warframe.csproj", "{B75E15BA-5BA2-4629-AAB4-E35A94311C91}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Warframe.World", "..\Warframe.NET\src\Warframe.World\Warframe.World.csproj", "{0B279425-7802-4BE2-ABCD-2338A26BBD37}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +21,18 @@ Global
 		{A94956E6-6D62-4059-A11B-E31C76878483}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A94956E6-6D62-4059-A11B-E31C76878483}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A94956E6-6D62-4059-A11B-E31C76878483}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8BC7DABA-74F0-43DA-8D7E-159ABE62FDC2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BC7DABA-74F0-43DA-8D7E-159ABE62FDC2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BC7DABA-74F0-43DA-8D7E-159ABE62FDC2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BC7DABA-74F0-43DA-8D7E-159ABE62FDC2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B75E15BA-5BA2-4629-AAB4-E35A94311C91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B75E15BA-5BA2-4629-AAB4-E35A94311C91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B75E15BA-5BA2-4629-AAB4-E35A94311C91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B75E15BA-5BA2-4629-AAB4-E35A94311C91}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0B279425-7802-4BE2-ABCD-2338A26BBD37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B279425-7802-4BE2-ABCD-2338A26BBD37}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B279425-7802-4BE2-ABCD-2338A26BBD37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B279425-7802-4BE2-ABCD-2338A26BBD37}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

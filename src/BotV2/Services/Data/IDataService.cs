@@ -1,16 +1,15 @@
-﻿using System.Threading.Tasks;
-using DSharpPlus.CommandsNext;
+﻿using DSharpPlus.CommandsNext;
 
 namespace BotV2.Services.Data
 {
     public interface IDataService
     {
-        Task<IKeyValueDataStore> GetGlobalStore();
+        IKeyValueDataStore GetGlobalStore();
 
-        Task<ICommandDataStore> GetCommandStore(Command command);
+        ICommandDataStore GetCommandStore(Command command);
 
-        Task<IGuildDataStore> GetGuildStore(ulong id);
+        IGuildDataStore GetGuildStore(ulong id);
 
-        Task<IKeyValueDataStore> GetUserStore(ulong id);
+        IKeyValueDataStore GetUserStore(ulong id);
     }
 }

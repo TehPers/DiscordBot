@@ -1,8 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using BotV2.Services;
-using BotV2.Services.Commands;
 using DSharpPlus;
 using DSharpPlus.EventArgs;
 using Microsoft.Extensions.Logging;
@@ -13,16 +12,14 @@ namespace BotV2
     internal sealed class Bot
     {
         private readonly DiscordClient _client;
-        private readonly CommandService _commandService;
         private readonly ILogger<Bot> _logger;
         private int _running;
 
         public bool IsRunning => this._running > 0;
 
-        public Bot(DiscordClient client, CommandService commandService, ILogger<Bot> logger)
+        public Bot(DiscordClient client, IEnumerable<BaseExtension> extensions, ILogger<Bot> logger)
         {
             this._client = client ?? throw new ArgumentNullException(nameof(client));
-            this._commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
             this._logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             this._running = 0;
@@ -35,7 +32,11 @@ namespace BotV2
             client.UnknownEvent += args => this.LogEventAsync("Unknown", LogLevel.Information, $"An unknown event occurred: [{args.EventName}] {args.Json}");
             client.DebugLogger.LogMessageReceived += this.DebugLoggerOnLogMessageReceived;
 
-            // client.MessageReceived += commandHandler.OnMessageReceived;
+            // Extensions
+            foreach (var extension in extensions)
+            {
+                client.AddExtension(extension);
+            }
         }
 
         private void DebugLoggerOnLogMessageReceived(object? sender, DebugLogMessageEventArgs e)
@@ -61,7 +62,6 @@ namespace BotV2
                 {
                     this._logger.LogInformation("Starting");
                     await this._client.ConnectAsync();
-                    this._commandService.Initialize();
                     this._logger.LogInformation("Started");
                 }
                 catch

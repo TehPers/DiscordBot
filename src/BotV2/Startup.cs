@@ -6,6 +6,7 @@ using BotV2.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace BotV2
 {
@@ -28,13 +29,18 @@ namespace BotV2
                 logger.LogTrace("Built service provider");
                 logger.LogInformation("Starting...");
 
+                var settings = services.GetRequiredService<JsonSerializerSettings>();
+                JsonConvert.DefaultSettings = () => settings;
+
                 try
                 {
                     var bot = services.GetRequiredService<Bot>();
                     await bot.Start();
 
                     // Wait until bot is finished
-                    while (bot.IsRunning) { }
+                    while (bot.IsRunning)
+                    {
+                    }
                 }
                 catch (Exception ex) when (Startup.LogError(logger, ex, "Exception thrown during bot initialization"))
                 {
@@ -61,6 +67,7 @@ namespace BotV2
             services.AddLogging(builder =>
             {
                 builder.AddConsole();
+                builder.AddDatabase();
                 builder.AddConfiguration(configuration.GetSection("Logging"));
             });
 
@@ -75,6 +82,7 @@ namespace BotV2
             // Commands
             services.AddFireEmblem(configuration);
             services.AddCommand<AdminModule>();
+            services.AddWarframeInfo(configuration);
 
             return services;
         }
@@ -83,7 +91,7 @@ namespace BotV2
         {
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Path.Combine(Directory.GetCurrentDirectory(), "Configs"))
-                .AddJsonFile("appsettings.json");
+                .AddJsonFile("appsettings.json", true, false);
 
             // Environment-specific config files
 #pragma warning disable 162

@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Text.RegularExpressions;
+using System.Linq;
+using BotV2.BotExtensions;
 using BotV2.Models;
-using BotV2.Services;
 using BotV2.Services.Commands;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
@@ -13,8 +13,6 @@ namespace BotV2.Extensions
 {
     public static class DiscordServiceExtensions
     {
-        private static readonly Regex CommandRegex = new Regex(@"(?<cmd>\S+)\b");
-
         public static IServiceCollection AddDiscordClient(this IServiceCollection services, IConfiguration config)
         {
             _ = config ?? throw new ArgumentNullException(nameof(config));
@@ -33,14 +31,22 @@ namespace BotV2.Extensions
             return services;
         }
 
+        public static IServiceCollection TryAddBotExtension<TService>(this IServiceCollection services) where TService : BaseExtension
+        {
+            _ = services ?? throw new ArgumentNullException(nameof(services));
+
+            services.TryAddEnumerable(new[] {ServiceDescriptor.Singleton<BaseExtension, TService>()});
+            return services;
+        }
+
         public static IServiceCollection AddCommandHandler(this IServiceCollection services)
         {
             _ = services ?? throw new ArgumentNullException(nameof(services));
 
-            services.TryAddSingleton<CommandService>();
-            services.TryAddSingleton<CommandConfigurationService>();
+            services.TryAddBotExtension<CommandBotExtension>();
+            services.AddSingleton<CommandConfigurationService>();
             services.AddRedis();
-            services.TryAddSingleton(serviceProvider =>
+            services.AddSingleton(serviceProvider =>
             {
                 var client = serviceProvider.GetRequiredService<DiscordClient>();
                 return client.UseCommandsNext(new CommandsNextConfiguration
@@ -58,7 +64,6 @@ namespace BotV2.Extensions
             _ = moduleType ?? throw new ArgumentNullException(nameof(moduleType));
             _ = services ?? throw new ArgumentNullException(nameof(services));
 
-            services.AddCommandHandler();
             services.AddSingleton(new CommandModuleRegistration(moduleType));
             return services;
         }
