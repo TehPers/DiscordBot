@@ -95,7 +95,7 @@ namespace BotV2.BotExtensions
                 }
                 catch (Exception ex)
                 {
-                    this._logger.LogError(ex, "An exception occurred while monitoring the warframe world state.");
+                    this._logger.LogError(ex, "An exception occurred while monitoring the warframe world state");
                 }
             }
         }
@@ -230,6 +230,21 @@ namespace BotV2.BotExtensions
             if ((await lastStatus.Set(cetusStatus.IsDay)).TryGetValue(out var lastStatusValue) && lastStatusValue == cetusStatus.IsDay)
             {
                 return;
+            }
+
+            await foreach (var messagePointer in cetusMessages.PopAll(cancellation))
+            {
+                try
+                {
+                    if (await messagePointer.TryGetMessage(this.Client) is {} message)
+                    {
+                        await message.TryDeleteAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    this._logger.LogError(ex, $"Unable to delete cetus message {messagePointer}");
+                }
             }
 
             await foreach (var subscriber in this._infoService.GetSubscribers(WarframeInfoService.InfoType.Cetus).WithCancellation(cancellation))
