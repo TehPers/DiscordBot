@@ -73,7 +73,8 @@ namespace BotV2.Services
             _ = reward ?? throw new ArgumentNullException(nameof(reward));
 
             var enumeratedFilter = this._config.CurrentValue.ImportantRewards ?? new List<string>();
-            return this.ToStackedItems(reward).Where(item => enumeratedFilter.Any(f => f.Contains(item.Type, StringComparison.OrdinalIgnoreCase)));
+            var items = this.ToStackedItems(reward);
+            return items.Where(item => enumeratedFilter.Any(filter => item.Type.Contains(filter, StringComparison.OrdinalIgnoreCase)));
         }
 
         public IEnumerable<string> GetItemStrings(IEnumerable<StackedItem> items)

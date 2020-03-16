@@ -50,9 +50,11 @@ namespace BotV2.Extensions
         {
             _ = set ?? throw new ArgumentNullException(nameof(set));
 
+            cancellation.ThrowIfCancellationRequested();
             while ((await set.TryPopAsync()).TryGetValue(out var value))
             {
                 yield return value;
+                cancellation.ThrowIfCancellationRequested();
             }
         }
 
@@ -61,9 +63,11 @@ namespace BotV2.Extensions
         {
             _ = set ?? throw new ArgumentNullException(nameof(set));
 
+            cancellation.ThrowIfCancellationRequested();
             while ((await set.TryPopAsync()).TryGetValue(out var value))
             {
                 yield return value;
+                cancellation.ThrowIfCancellationRequested();
             }
         }
 
