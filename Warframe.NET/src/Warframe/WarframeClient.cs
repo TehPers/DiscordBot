@@ -92,7 +92,7 @@ namespace Warframe
 
         public void Dispose()
         {
-            this._disposeSource.Cancel();
+            this._disposeSource.Dispose();
 
             this._alertsProvider.Dispose();
             this._invasionsProvider.Dispose();
