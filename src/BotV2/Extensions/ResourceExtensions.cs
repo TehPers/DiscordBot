@@ -69,7 +69,7 @@ namespace BotV2.Extensions
 
         public static IAsyncEnumerable<T> PopAvailable<T>(this IUnlockedDelayedTaskQueueResource<T> queue, CancellationToken cancellation = default)
         {
-            return queue.PopAvailable(TimeSpan.FromSeconds(5), cancellation);
+            return queue.PopAvailable(TimeSpan.FromSeconds(10), cancellation);
         }
 
         public static async IAsyncEnumerable<T> PopAvailable<T>(this IUnlockedDelayedTaskQueueResource<T> queue, TimeSpan lockTime, [EnumeratorCancellation] CancellationToken cancellation = default)
@@ -81,9 +81,14 @@ namespace BotV2.Extensions
                 cancellation.ThrowIfCancellationRequested();
 
                 Option<T> top;
-                await using (var lockedQueue = await queue.Reserve(TimeSpan.FromSeconds(5)))
+                try
                 {
+                    await using var lockedQueue = await queue.Reserve(lockTime);
                     top = await lockedQueue.TryPopAsync();
+                }
+                catch (TimeoutException)
+                {
+                    continue;
                 }
 
                 if (!top.TryGetValue(out var value))

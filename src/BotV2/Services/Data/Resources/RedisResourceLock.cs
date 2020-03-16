@@ -6,6 +6,8 @@ namespace BotV2.Services.Data.Resources
 {
     public sealed class RedisResourceLock : IResourceLock
     {
+        private const string BaseKey = ":lock";
+
         private readonly IDatabaseFactory _dbFactory;
         private readonly string _lockKey;
         private readonly Guid _instanceId;
@@ -26,15 +28,12 @@ namespace BotV2.Services.Data.Resources
         public async ValueTask DisposeAsync()
         {
             var db = await this._dbFactory.GetDatabase();
-            if (!await db.LockReleaseAsync(this._lockKey, this._instanceId.ToString()))
-            {
-                throw new TimeoutException("The lock timed out before being released");
-            }
+            await db.LockReleaseAsync(this._lockKey, this._instanceId.ToString());
         }
 
         public static string GetLockKey(string resourceKey)
         {
-            return $":lock:{resourceKey}";
+            return $"{RedisResourceLock.BaseKey}:{resourceKey}";
         }
 
         public static async Task<RedisResourceLock> Acquire(IDatabaseFactory dbFactory, string resourceKey, TimeSpan expiry)

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using BotV2.Extensions;
 using BotV2.Models;
 using BotV2.Services.Data.Database;
 using Newtonsoft.Json;
@@ -24,24 +23,24 @@ namespace BotV2.Services.Data.Resources.DelayedTaskQueues
             }
 
             var poppedRaw = await base.TryPopAsync();
-            if (!poppedRaw.TryGetValue(out var item) || !(item is { Availabile: var availableTime, Value: var value }))
+            if (!(poppedRaw.TryGetValue(out var item) && item is { }))
             {
                 return default;
             }
 
             var now = DateTimeOffset.UtcNow;
-            if (availableTime > now)
+            if (item.Availabile > now)
             {
-                await this.AddAsync(value, availableTime);
+                await this.AddAsync(item);
                 return default;
             }
 
-            return new Option<T>(value);
+            return new Option<T>(item.Value);
         }
 
         private Task<bool> ExtendLock()
         {
-            return this.ExtendLock(TimeSpan.FromSeconds(0.1));
+            return this.ExtendLock(TimeSpan.FromSeconds(1));
         }
 
         public Task<bool> ExtendLock(TimeSpan addedTime)
