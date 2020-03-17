@@ -139,8 +139,8 @@ namespace BotV2.BotExtensions
                 foreach (var alert in newAlerts)
                 {
                     var channel = await this.Client.GetChannelAsync(subscriber);
-                    var embed = this.GetAlertEmbed(alert);
-                    var msg = await channel.SendMessageAsync(embed: embed);
+                    var (content, embed) = this.GetAlertMessage(channel, alert);
+                    var msg = await channel.SendMessageAsync(content: content, embed: embed);
                     var endTime = alert.ExpiresAt;
 
                     try
@@ -195,9 +195,9 @@ namespace BotV2.BotExtensions
             {
                 foreach (var invasion in newInvasions)
                 {
-                    var embed = this.GetInvasionEmbed(invasion);
                     var channel = await this.Client.GetChannelAsync(subscriber);
-                    var msg = await channel.SendMessageAsync(embed: embed);
+                    var (content, embed) = this.GetInvasionEmbed(channel, invasion);
+                    var msg = await channel.SendMessageAsync(content: content, embed: embed);
                     var removeAfter = invasion.ActivatedAt + this._invasionTtl;
 
                     try
@@ -249,9 +249,9 @@ namespace BotV2.BotExtensions
 
             await foreach (var subscriber in this._infoService.GetSubscribers(WarframeInfoService.InfoType.Cetus).WithCancellation(cancellation))
             {
-                var embed = this.GetCetusEmbed(cetusStatus);
                 var channel = await this.Client.GetChannelAsync(subscriber);
-                var msg = await channel.SendMessageAsync(embed: embed);
+                var (content, embed) = this.GetCetusEmbed(channel, cetusStatus);
+                var msg = await channel.SendMessageAsync(content: content, embed: embed);
 
                 try
                 {
@@ -325,7 +325,6 @@ namespace BotV2.BotExtensions
             var globalStore = this._dataService.GetGlobalStore();
             var cetusMessages = globalStore.GetSetResource<MessagePointer>(WarframeInfoBotExtension.CetusMessagesKey);
             var cetusStatus = await this._wfClient.GetCetusStatus(cancellation);
-            var embed = this.GetCetusEmbed(cetusStatus);
 
             await foreach (var messagePointer in cetusMessages)
             {
@@ -333,6 +332,7 @@ namespace BotV2.BotExtensions
                 {
                     if (await messagePointer.TryGetMessage(this.Client) is { } message)
                     {
+                        var (_, embed) = this.GetCetusEmbed(message.Channel, cetusStatus);
                         await message.TryModifyAsync(embed: embed);
                     }
                 }
@@ -343,9 +343,13 @@ namespace BotV2.BotExtensions
             }
         }
 
-        private DiscordEmbed GetAlertEmbed(Alert alert)
+        private (string content, DiscordEmbed embed) GetAlertMessage(DiscordChannel channel, Alert alert)
         {
             _ = alert ?? throw new ArgumentNullException(nameof(alert));
+
+            var importantRewards = this._infoService.GetImportantRewards(alert.Mission.Reward).ToList();
+            var roles = this._infoService.GetRolesForRewards(channel.Guild, importantRewards).Distinct();
+            var content = string.Join(" ", roles.Where(role => role.IsMentionable).Select(role => role.Mention));
 
             var description = new StringBuilder();
             if (alert.Mission.IsNightmare)
@@ -359,10 +363,9 @@ namespace BotV2.BotExtensions
             }
 
             description.AppendLine($"{alert.Mission.Type} - {alert.Mission.Faction} ({alert.Mission.MinimumEnemyLevel}-{alert.Mission.MaximumEnemyLevel})");
-            description.AppendLine(string.Join(", ", alert.Mission.Reward.Forward(this._infoService.GetImportantRewards).Forward(this._infoService.GetItemStrings)));
+            description.AppendLine(string.Join(", ", this._infoService.GetItemStrings(importantRewards)));
 
             var durationStr = this.Format(alert.ExpiresAt - alert.ActivatedAt);
-
             var embed = new DiscordEmbedBuilder()
                 .WithTitle($"Alert - {alert.Mission.Node} - {durationStr}")
                 .WithDescription(description.ToString())
@@ -373,7 +376,7 @@ namespace BotV2.BotExtensions
             // Thumbnail
             if (this._config.CurrentValue.RewardIcons is { } rewardThumbnails)
             {
-                foreach (var reward in this._infoService.GetImportantRewards(alert.Mission.Reward))
+                foreach (var reward in importantRewards)
                 {
                     if (rewardThumbnails.FirstOrDefault(kv => string.Equals(kv.Key, reward.Type, StringComparison.OrdinalIgnoreCase)) is {Value: string thumbnail} && !string.IsNullOrWhiteSpace(thumbnail))
                     {
@@ -383,12 +386,18 @@ namespace BotV2.BotExtensions
                 }
             }
 
-            return embed;
+            return (content, embed);
         }
 
-        private DiscordEmbed GetInvasionEmbed(Invasion invasion)
+        private (string content, DiscordEmbed embed) GetInvasionEmbed(DiscordChannel channel, Invasion invasion)
         {
             _ = invasion ?? throw new ArgumentNullException(nameof(invasion));
+
+            var attackerRewards = this._infoService.GetImportantRewards(invasion.AttackerReward).ToList();
+            var defenderRewards = this._infoService.GetImportantRewards(invasion.DefenderReward).ToList();
+            var importantRewards = attackerRewards.Concat(defenderRewards);
+            var roles = this._infoService.GetRolesForRewards(channel.Guild, importantRewards).Distinct();
+            var content = string.Join(" ", roles.Where(role => role.IsMentionable).Select(role => role.Mention));
 
             var embed = new DiscordEmbedBuilder()
                 .WithTitle($"Invasion - {invasion.Node} - {invasion.DefendingFaction} vs. {invasion.AttackingFaction}")
@@ -397,17 +406,15 @@ namespace BotV2.BotExtensions
                 .WithTimestamp(invasion.ActivatedAt);
 
             // Defender rewards
-            var defenderRewards = invasion.DefenderReward.Forward(this._infoService.GetImportantRewards).Forward(this._infoService.GetItemStrings).ToArray();
             if (defenderRewards.Any())
             {
-                embed.AddField(invasion.DefendingFaction, string.Join("\n", defenderRewards));
+                embed.AddField(invasion.DefendingFaction, string.Join("\n", this._infoService.GetItemStrings(defenderRewards)));
             }
 
             // Attacker rewards
-            var attackerRewards = invasion.AttackerReward.Forward(this._infoService.GetImportantRewards).Forward(this._infoService.GetItemStrings).ToArray();
             if (attackerRewards.Any())
             {
-                embed.AddField(invasion.AttackingFaction, string.Join("\n", attackerRewards));
+                embed.AddField(invasion.AttackingFaction, string.Join("\n", this._infoService.GetItemStrings(attackerRewards)));
             }
 
             // Thumbnail
@@ -416,11 +423,14 @@ namespace BotV2.BotExtensions
                 embed = embed.WithThumbnailUrl(thumbnail);
             }
 
-            return embed;
+            return (content, embed);
         }
 
-        private DiscordEmbed GetCetusEmbed(CetusCycle cetusStatus)
+        private (string content, DiscordEmbed embed) GetCetusEmbed(DiscordChannel channel, CetusCycle cetusStatus)
         {
+            var roles = this._infoService.GetRolesForCycle(channel.Guild, cetusStatus).Distinct();
+            var content = string.Join(" ", roles.Where(role => role.IsMentionable).Select(role => role.Mention));
+
             var color = cetusStatus.IsDay ? this._config.CurrentValue.DayColor : this._config.CurrentValue.NightColor;
             var embed = new DiscordEmbedBuilder()
                 .WithTitle($"{(cetusStatus.IsDay ? this._config.CurrentValue.DayIcon : this._config.CurrentValue.NightIcon)} Cetus")
@@ -435,7 +445,7 @@ namespace BotV2.BotExtensions
                 embed = embed.WithThumbnailUrl(thumbnail);
             }
 
-            return embed;
+            return (content, embed);
         }
 
         private string Format(TimeSpan interval)

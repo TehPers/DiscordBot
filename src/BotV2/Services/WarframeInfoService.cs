@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BotV2.Models.WarframeInfo;
 using BotV2.Services.Data;
+using DSharpPlus.Entities;
 using Microsoft.Extensions.Options;
 using Warframe.World.Models;
 
@@ -66,6 +68,45 @@ namespace BotV2.Services
             var subscribers = globalStore.GetSetResource<ulong>(this.GetSubscriptionKey(infoType));
 
             return subscribers;
+        }
+
+        [SuppressMessage("ReSharper", "HeuristicUnreachableCode", Justification = "LINQ does not currently support nullable reference types, so the compiler doesn't know that FirstOrDefault can return null.")]
+        public IEnumerable<DiscordRole> GetRolesForRewards(DiscordGuild guild, IEnumerable<StackedItem> items)
+        {
+            _ = items ?? throw new ArgumentNullException(nameof(items));
+            _ = guild ?? throw new ArgumentNullException(nameof(guild));
+
+            var enumeratedFilter = this._config.CurrentValue.ImportantRewards ?? new List<string>();
+            foreach (var item in items)
+            {
+                if (!(enumeratedFilter.FirstOrDefault(filter => item.Type.Contains(filter, StringComparison.OrdinalIgnoreCase)) is { } matchedFilter))
+                {
+                    continue;
+                }
+
+                foreach (var role in guild.Roles.Values)
+                {
+                    if (string.Equals(role.Name, $"wfinfo: {matchedFilter}"))
+                    {
+                        yield return role;
+                    }
+                }
+            }
+        }
+
+        public IEnumerable<DiscordRole> GetRolesForCycle(DiscordGuild guild, CetusCycle cycle)
+        {
+            _ = cycle ?? throw new ArgumentNullException(nameof(cycle));
+            _ = guild ?? throw new ArgumentNullException(nameof(guild));
+
+            var name = cycle.IsDay ? "day" : "night";
+            foreach (var role in guild.Roles.Values)
+            {
+                if (string.Equals(role.Name, $"wfinfo: {name}"))
+                {
+                    yield return role;
+                }
+            }
         }
 
         public IEnumerable<StackedItem> GetImportantRewards(MissionReward reward)

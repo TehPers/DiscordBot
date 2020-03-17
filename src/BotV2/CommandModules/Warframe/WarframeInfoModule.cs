@@ -29,6 +29,7 @@ namespace BotV2.CommandModules.Warframe
 
             [Command("toggle")]
             [RequireBotPermissions(Permissions.SendMessages)]
+            [RequireGuild]
             public async Task Toggle(CommandContext context)
             {
                 _ = context ?? throw new ArgumentNullException(nameof(context));
@@ -52,6 +53,7 @@ namespace BotV2.CommandModules.Warframe
 
             [Command("toggle")]
             [RequireBotPermissions(Permissions.SendMessages)]
+            [RequireGuild]
             public async Task Toggle(CommandContext context)
             {
                 _ = context ?? throw new ArgumentNullException(nameof(context));
@@ -75,6 +77,7 @@ namespace BotV2.CommandModules.Warframe
 
             [Command("toggle")]
             [RequireBotPermissions(Permissions.SendMessages)]
+            [RequireGuild]
             public async Task Toggle(CommandContext context)
             {
                 _ = context ?? throw new ArgumentNullException(nameof(context));
