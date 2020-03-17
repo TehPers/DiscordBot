@@ -1,7 +1,7 @@
-FROM mcr.microsoft.com/dotnet/core/runtime:3.0 AS runtime
+FROM mcr.microsoft.com/dotnet/core/runtime:3.1 AS runtime
 
 # Restore NuGet packages
-FROM mcr.microsoft.com/dotnet/core/sdk:3.0 AS restore
+FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS restore
 WORKDIR /build
 COPY src/Bot.sln src/Bot.sln
 COPY src/BotV2/BotV2.csproj src/BotV2/BotV2.csproj
