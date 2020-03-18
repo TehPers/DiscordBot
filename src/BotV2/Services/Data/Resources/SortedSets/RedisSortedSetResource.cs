@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,7 +8,6 @@ using BotV2.Extensions;
 using BotV2.Models;
 using BotV2.Services.Data.Database;
 using Newtonsoft.Json;
-using StackExchange.Redis;
 
 namespace BotV2.Services.Data.Resources.SortedSets
 {
@@ -31,7 +31,7 @@ namespace BotV2.Services.Data.Resources.SortedSets
             }
         }
 
-        public virtual async Task<bool> ContainsAsync(T item)
+        public virtual async Task<bool> ContainsAsync([NotNull] T item)
         {
             var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
             return db.SortedSetScoreAsync(this.ResourceKey, this.Serializer.ToString(item)) != null;
@@ -43,18 +43,18 @@ namespace BotV2.Services.Data.Resources.SortedSets
             return await db.SortedSetLengthAsync(this.ResourceKey).ConfigureAwait(false);
         }
 
-        Task IAsyncCollection<T>.AddAsync(T item)
+        Task IAsyncCollection<T>.AddAsync([NotNull] T item)
         {
             return this.AddAsync(item);
         }
 
-        public virtual async Task<bool> AddAsync(T item)
+        public virtual async Task<bool> AddAsync([NotNull] T item)
         {
             var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
-            return await db.SortedSetAddAsync(this.ResourceKey, this.Serializer.ToString(item), item.Score).ConfigureAwait(false);
+            return await db.SortedSetAddAsync(this.ResourceKey, this.Serializer.ToString(item), item!.Score).ConfigureAwait(false);
         }
 
-        public virtual async Task<bool> RemoveAsync(T item)
+        public virtual async Task<bool> RemoveAsync([NotNull] T item)
         {
             var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
             return await db.SortedSetRemoveAsync(this.ResourceKey, this.Serializer.ToString(item)).ConfigureAwait(false);

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using BotV2.Services.JsonConverters;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,6 +37,7 @@ namespace BotV2.Extensions
             return services;
         }
 
+        [return: MaybeNull]
         public static T FromString<T>(this JsonSerializer serializer, string value)
         {
             _ = value ?? throw new ArgumentNullException(nameof(value));
@@ -46,7 +48,7 @@ namespace BotV2.Extensions
             return serializer.Deserialize<T>(jsonReader);
         }
 
-        public static string ToString<T>(this JsonSerializer serializer, T value)
+        public static string ToString<T>(this JsonSerializer serializer, [MaybeNull] T value)
         {
             _ = serializer ?? throw new ArgumentNullException(nameof(serializer));
 

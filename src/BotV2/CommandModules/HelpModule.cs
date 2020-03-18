@@ -15,13 +15,11 @@ namespace BotV2.CommandModules
     [SuppressMessage("ReSharper", "UnusedMember.Global", Justification = "Methods are called via reflection.")]
     public sealed class HelpModule : BaseCommandModule
     {
-        private readonly CommandsNextConfiguration _commandsNextConfig;
         private readonly CommandConfigurationService _configService;
         private readonly IHelpFormatterFactory _helpFormatterFactory;
 
-        public HelpModule(CommandsNextConfiguration commandsNextConfig, CommandConfigurationService commandConfigService, IHelpFormatterFactory helpFormatterFactory)
+        public HelpModule(CommandConfigurationService commandConfigService, IHelpFormatterFactory helpFormatterFactory)
         {
-            this._commandsNextConfig = commandsNextConfig ?? throw new ArgumentNullException(nameof(commandsNextConfig));
             this._configService = commandConfigService ?? throw new ArgumentNullException(nameof(commandConfigService));
             this._helpFormatterFactory = helpFormatterFactory ?? throw new ArgumentNullException(nameof(helpFormatterFactory));
         }
