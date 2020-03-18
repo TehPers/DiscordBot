@@ -17,7 +17,7 @@ COPY Warframe.NET/src Warframe.NET/src
 ARG CONFIGURATION=Release
 RUN dotnet build -c ${CONFIGURATION} src/Bot.sln
 RUN dotnet test -c ${CONFIGURATION} src/Bot.sln
-RUN dotnet publish -c ${CONFIGURATION} -f netcoreapp3.1 -o publish_output src/Bot.sln
+RUN dotnet publish -c ${CONFIGURATION} -o publish_output src/BotV2/BotV2.csproj
 
 # Runtime
 FROM runtime
