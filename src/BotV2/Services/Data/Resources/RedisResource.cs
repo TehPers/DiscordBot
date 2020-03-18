@@ -17,8 +17,8 @@ namespace BotV2.Services.Data.Resources
 
         public virtual async Task<bool> SetExpiry(DateTimeOffset expiry)
         {
-            var db = await this.DbFactory.GetDatabase();
-            return await db.KeyExpireAsync(this.ResourceKey, expiry.UtcDateTime);
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            return await db.KeyExpireAsync(this.ResourceKey, expiry.UtcDateTime).ConfigureAwait(false);
         }
     }
 }

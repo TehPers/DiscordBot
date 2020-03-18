@@ -19,15 +19,15 @@ namespace BotV2.Extensions
 
             while (true)
             {
-                await using (var lockedResource = await resource.Reserve(TimeSpan.FromSeconds(10)))
+                await using (var lockedResource = await resource.Reserve(TimeSpan.FromSeconds(10)).ConfigureAwait(false))
                 {
-                    if ((await lockedResource.TryPopAsync()).TryGetValue(out var popped))
+                    if ((await lockedResource.TryPopAsync().ConfigureAwait(false)).TryGetValue(out var popped))
                     {
                         return popped;
                     }
                 }
 
-                await Task.Delay(pollMilliseconds);
+                await Task.Delay(pollMilliseconds).ConfigureAwait(false);
             }
         }
 
@@ -42,7 +42,7 @@ namespace BotV2.Extensions
             _ = defaultFactory ?? throw new ArgumentNullException(nameof(defaultFactory));
             _ = resource ?? throw new ArgumentNullException(nameof(resource));
 
-            var result = await resource.Get();
+            var result = await resource.Get().ConfigureAwait(false);
             return result.TryGetValue(out var value) ? value : defaultFactory();
         }
 
@@ -51,7 +51,7 @@ namespace BotV2.Extensions
             _ = set ?? throw new ArgumentNullException(nameof(set));
 
             cancellation.ThrowIfCancellationRequested();
-            while ((await set.TryPopAsync()).TryGetValue(out var value))
+            while ((await set.TryPopAsync().ConfigureAwait(false)).TryGetValue(out var value))
             {
                 yield return value;
                 cancellation.ThrowIfCancellationRequested();
@@ -64,7 +64,7 @@ namespace BotV2.Extensions
             _ = set ?? throw new ArgumentNullException(nameof(set));
 
             cancellation.ThrowIfCancellationRequested();
-            while ((await set.TryPopAsync()).TryGetValue(out var value))
+            while ((await set.TryPopAsync().ConfigureAwait(false)).TryGetValue(out var value))
             {
                 yield return value;
                 cancellation.ThrowIfCancellationRequested();
@@ -87,8 +87,8 @@ namespace BotV2.Extensions
                 Option<T> top;
                 try
                 {
-                    await using var lockedQueue = await queue.Reserve(lockTime);
-                    top = await lockedQueue.TryPopAsync();
+                    await using var lockedQueue = await queue.Reserve(lockTime).ConfigureAwait(false);
+                    top = await lockedQueue.TryPopAsync().ConfigureAwait(false);
                 }
                 catch (TimeoutException)
                 {

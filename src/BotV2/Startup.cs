@@ -35,7 +35,7 @@ namespace BotV2
                 try
                 {
                     var bot = services.GetRequiredService<Bot>();
-                    await bot.Start();
+                    await bot.Start().ConfigureAwait(false);
 
                     // Wait until bot is finished
                     while (bot.IsRunning)
@@ -48,7 +48,7 @@ namespace BotV2
             }
 
             // Wait until closed
-            await Task.Delay(-1);
+            await Task.Delay(-1).ConfigureAwait(false);
         }
 
         private static bool LogError(ILogger logger, Exception ex, string? message = null)

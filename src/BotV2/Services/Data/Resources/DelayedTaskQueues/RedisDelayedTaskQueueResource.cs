@@ -21,7 +21,7 @@ namespace BotV2.Services.Data.Resources.DelayedTaskQueues
 
         public new async Task<Option<T>> TryPeekAsync()
         {
-            var first = await base.TryPeekAsync();
+            var first = await base.TryPeekAsync().ConfigureAwait(false);
 
             var now = DateTimeOffset.UtcNow;
             return first.Where(item => now >= item.Availabile).Select(item => item.Value);
@@ -29,7 +29,7 @@ namespace BotV2.Services.Data.Resources.DelayedTaskQueues
 
         public async Task<bool> AddAsync(T value, DateTimeOffset availabilityTime)
         {
-            return await base.AddAsync(new DelayedTaskQueueItem<T>(value, availabilityTime));
+            return await base.AddAsync(new DelayedTaskQueueItem<T>(value, availabilityTime)).ConfigureAwait(false);
         }
     }
 }

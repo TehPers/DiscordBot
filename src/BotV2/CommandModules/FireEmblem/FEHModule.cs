@@ -15,7 +15,7 @@ using DSharpPlus.Entities;
 
 namespace BotV2.CommandModules.FireEmblem
 {
-    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    [SuppressMessage("ReSharper", "UnusedMember.Global", Justification = "Methods are called via reflection.")]
     public sealed class FehModule : BaseCommandModule
     {
         private static readonly Regex HexColorRegex = new Regex("#?(?:(?<r>[0-9a-fA-F]{2})(?<g>[0-9a-fA-F]{2})(?<b>[0-9a-fA-F]{2})|(?<r>[0-9a-fA-F])(?<g>[0-9a-fA-F])(?<b>[0-9a-fA-F]))");
@@ -46,14 +46,14 @@ namespace BotV2.CommandModules.FireEmblem
         {
             if (string.IsNullOrWhiteSpace(query))
             {
-                await context.ShowHelp();
+                await context.ShowHelp().ConfigureAwait(false);
                 return;
             }
 
-            await context.TriggerTypingAsync();
-            var results = await this._dataProvider.GetSkill(query);
+            await context.TriggerTypingAsync().ConfigureAwait(false);
+            var results = await this._dataProvider.GetSkill(query).ConfigureAwait(false);
             var embed = this.FormatResponse(results).Build();
-            await context.RespondAsync(embed: embed);
+            await context.RespondAsync(embed: embed).ConfigureAwait(false);
         }
 
         [Command("stats")]
@@ -65,14 +65,14 @@ namespace BotV2.CommandModules.FireEmblem
         {
             if (string.IsNullOrWhiteSpace(query))
             {
-                await context.ShowHelp();
+                await context.ShowHelp().ConfigureAwait(false);
                 return;
             }
 
-            await context.TriggerTypingAsync();
-            var results = await this._dataProvider.GetCharacter(query);
+            await context.TriggerTypingAsync().ConfigureAwait(false);
+            var results = await this._dataProvider.GetCharacter(query).ConfigureAwait(false);
             var embed = this.FormatResponse(results).Build();
-            await context.RespondAsync(embed: embed);
+            await context.RespondAsync(embed: embed).ConfigureAwait(false);
         }
 
         [Command("weapons")]
@@ -84,14 +84,14 @@ namespace BotV2.CommandModules.FireEmblem
         {
             if (string.IsNullOrWhiteSpace(query))
             {
-                await context.ShowHelp();
+                await context.ShowHelp().ConfigureAwait(false);
                 return;
             }
 
-            await context.TriggerTypingAsync();
-            var results = await this._dataProvider.GetWeapon(query);
+            await context.TriggerTypingAsync().ConfigureAwait(false);
+            var results = await this._dataProvider.GetWeapon(query).ConfigureAwait(false);
             var embed = this.FormatResponse(results).Build();
-            await context.RespondAsync(embed: embed);
+            await context.RespondAsync(embed: embed).ConfigureAwait(false);
         }
 
         [Command("seals")]
@@ -103,14 +103,14 @@ namespace BotV2.CommandModules.FireEmblem
         {
             if (string.IsNullOrWhiteSpace(query))
             {
-                await context.ShowHelp();
+                await context.ShowHelp().ConfigureAwait(false);
                 return;
             }
 
-            await context.TriggerTypingAsync();
-            var results = await this._dataProvider.GetSeal(query);
+            await context.TriggerTypingAsync().ConfigureAwait(false);
+            var results = await this._dataProvider.GetSeal(query).ConfigureAwait(false);
             var embed = this.FormatResponse(results).Build();
-            await context.RespondAsync(embed: embed);
+            await context.RespondAsync(embed: embed).ConfigureAwait(false);
         }
 
         private DiscordEmbedBuilder FormatResponse(IEnumerable<KeyValuePair<string, string>> properties)

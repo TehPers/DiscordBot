@@ -18,7 +18,7 @@ namespace BotV2.Services.Commands
         {
             var dataStore = this._dataService.GetGuildStore(guildId);
             var resource = dataStore.GetObjectResource<bool>($"commands:{command.QualifiedName}:enabled");
-            if ((await resource.Get()).TryGetValue(out var enabled))
+            if ((await resource.Get().ConfigureAwait(false)).TryGetValue(out var enabled))
             {
                 return enabled;
             }
@@ -30,7 +30,7 @@ namespace BotV2.Services.Commands
         {
             var dataStore = this._dataService.GetGuildStore(guildId);
             var resource = dataStore.GetObjectResource<bool>($"commands:{command.QualifiedName}:enabled");
-            await resource.Set(enabled);
+            await resource.Set(enabled).ConfigureAwait(false);
         }
     }
 }

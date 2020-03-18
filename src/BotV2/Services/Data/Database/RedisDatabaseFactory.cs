@@ -14,13 +14,13 @@ namespace BotV2.Services.Data.Database
             this._multiplexerFactory = new Lazy<Task<ConnectionMultiplexer>>(async () =>
             {
                 var connectionString = configuration.GetConnectionString("Redis") ?? throw new InvalidOperationException("No Redis connection string is supplied in the configuration");
-                return await ConnectionMultiplexer.ConnectAsync(connectionString);
+                return await ConnectionMultiplexer.ConnectAsync(connectionString).ConfigureAwait(false);
             });
         }
 
         public async Task<IDatabaseAsync> GetDatabase()
         {
-            var multiplexer = await this._multiplexerFactory.Value;
+            var multiplexer = await this._multiplexerFactory.Value.ConfigureAwait(false);
             return multiplexer.GetDatabase();
         }
 
@@ -28,8 +28,8 @@ namespace BotV2.Services.Data.Database
         {
             if (this._multiplexerFactory.IsValueCreated)
             {
-                var multiplexer = await this._multiplexerFactory.Value;
-                await multiplexer.CloseAsync();
+                var multiplexer = await this._multiplexerFactory.Value.ConfigureAwait(false);
+                await multiplexer.CloseAsync().ConfigureAwait(false);
             }
         }
     }

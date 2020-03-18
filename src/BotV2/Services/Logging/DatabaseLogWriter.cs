@@ -38,10 +38,10 @@ namespace BotV2.Services.Logging
         private async Task WriteMessages(CancellationToken cancellation)
         {
             var reader = this._messageChannel.Reader;
-            while (await reader.WaitToReadAsync(cancellation) && reader.TryRead(out var message))
+            while (await reader.WaitToReadAsync(cancellation).ConfigureAwait(false) && reader.TryRead(out var message))
             {
                 var resource = this._dataStore.GetGlobalStore().GetListResource<LogEntry>("logs");
-                await resource.Add(message);
+                await resource.Add(message).ConfigureAwait(false);
             }
         }
 
@@ -49,7 +49,7 @@ namespace BotV2.Services.Logging
         {
             this._disposeToken.Dispose();
             this._messageChannel.Writer.Complete();
-            await this._consumer;
+            await this._consumer.ConfigureAwait(false);
         }
 
         [SuppressMessage("ReSharper", "MemberCanBePrivate.Local")]

@@ -18,8 +18,8 @@ namespace BotV2.Services.Data.Resources.Lists
 
         public async Task Add(T item)
         {
-            var db = await this.DbFactory.GetDatabase();
-            await db.ListRightPushAsync(this.ResourceKey, this.Serializer.ToString(item));
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            await db.ListRightPushAsync(this.ResourceKey, this.Serializer.ToString(item)).ConfigureAwait(false);
         }
     }
 }

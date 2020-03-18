@@ -13,7 +13,7 @@ namespace BotV2.Services.Data.Resources.Sets
 
         public async Task<ILockedSetResource<T>> Reserve(TimeSpan expiry)
         {
-            var resourceLock = await RedisResourceLock.Acquire(this.DbFactory, this.ResourceKey, expiry);
+            var resourceLock = await RedisResourceLock.Acquire(this.DbFactory, this.ResourceKey, expiry).ConfigureAwait(false);
             return new RedisLockedSetResource<T>(this.DbFactory, this.ResourceKey, this.Serializer, resourceLock);
         }
     }

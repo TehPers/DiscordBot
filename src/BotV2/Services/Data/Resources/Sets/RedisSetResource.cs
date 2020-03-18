@@ -22,8 +22,8 @@ namespace BotV2.Services.Data.Resources.Sets
 
         public async IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellation = new CancellationToken())
         {
-            var db = await this.DbFactory.GetDatabase();
-            foreach (var item in await db.SetMembersAsync(this.ResourceKey))
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            foreach (var item in await db.SetMembersAsync(this.ResourceKey).ConfigureAwait(false))
             {
                 yield return this.Serializer.FromString<T>(item);
                 cancellation.ThrowIfCancellationRequested();
@@ -32,14 +32,14 @@ namespace BotV2.Services.Data.Resources.Sets
 
         public virtual async Task<bool> ContainsAsync(T item)
         {
-            var db = await this.DbFactory.GetDatabase();
-            return await db.SetContainsAsync(this.ResourceKey, this.Serializer.ToString(item));
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            return await db.SetContainsAsync(this.ResourceKey, this.Serializer.ToString(item)).ConfigureAwait(false);
         }
 
         public virtual async Task<long> CountAsync()
         {
-            var db = await this.DbFactory.GetDatabase();
-            return await db.SetLengthAsync(this.ResourceKey);
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            return await db.SetLengthAsync(this.ResourceKey).ConfigureAwait(false);
         }
 
         Task IAsyncCollection<T>.AddAsync(T item)
@@ -49,26 +49,26 @@ namespace BotV2.Services.Data.Resources.Sets
 
         public async Task<Option<T>> TryPopAsync()
         {
-            var db = await this.DbFactory.GetDatabase();
-            return await db.SetPopAsync(this.ResourceKey) is {HasValue: true} value ? new Option<T>(this.Serializer.FromString<T>(value)) : default;
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            return await db.SetPopAsync(this.ResourceKey).ConfigureAwait(false) is {HasValue: true} value ? new Option<T>(this.Serializer.FromString<T>(value)) : default;
         }
 
         public virtual async Task<bool> AddAsync(T item)
         {
-            var db = await this.DbFactory.GetDatabase();
-            return await db.SetAddAsync(this.ResourceKey, this.Serializer.ToString(item));
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            return await db.SetAddAsync(this.ResourceKey, this.Serializer.ToString(item)).ConfigureAwait(false);
         }
 
         public virtual async Task<bool> RemoveAsync(T item)
         {
-            var db = await this.DbFactory.GetDatabase();
-            return await db.SetRemoveAsync(this.ResourceKey, this.Serializer.ToString(item));
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            return await db.SetRemoveAsync(this.ResourceKey, this.Serializer.ToString(item)).ConfigureAwait(false);
         }
 
         public virtual async Task<bool> ClearAsync()
         {
-            var db = await this.DbFactory.GetDatabase();
-            return await db.KeyDeleteAsync(this.ResourceKey);
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            return await db.KeyDeleteAsync(this.ResourceKey).ConfigureAwait(false);
         }
     }
 }

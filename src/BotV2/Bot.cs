@@ -60,7 +60,7 @@ namespace BotV2
                 try
                 {
                     this._logger.LogInformation("Starting");
-                    await this._client.ConnectAsync();
+                    await this._client.ConnectAsync().ConfigureAwait(false);
                     this._logger.LogInformation("Started");
                 }
                 catch

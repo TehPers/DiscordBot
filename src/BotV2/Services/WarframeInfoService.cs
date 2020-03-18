@@ -33,11 +33,11 @@ namespace BotV2.Services
 
             if (subscribed)
             {
-                await subscribers.AddAsync(channelId);
+                await subscribers.AddAsync(channelId).ConfigureAwait(false);
             }
             else
             {
-                await subscribers.RemoveAsync(channelId);
+                await subscribers.RemoveAsync(channelId).ConfigureAwait(false);
             }
         }
 
@@ -46,7 +46,7 @@ namespace BotV2.Services
             var globalStore = this._dataService.GetGlobalStore();
             var subscribers = globalStore.GetSetResource<ulong>(this.GetSubscriptionKey(infoType));
 
-            return await subscribers.ContainsAsync(channelId);
+            return await subscribers.ContainsAsync(channelId).ConfigureAwait(false);
         }
 
         public async Task<bool> ToggleSubscription(ulong channelId, InfoType infoType)
@@ -54,12 +54,12 @@ namespace BotV2.Services
             var globalStore = this._dataService.GetGlobalStore();
             var subscribers = globalStore.GetSetResource<ulong>(this.GetSubscriptionKey(infoType));
 
-            if (await subscribers.RemoveAsync(channelId))
+            if (await subscribers.RemoveAsync(channelId).ConfigureAwait(false))
             {
                 return false;
             }
 
-            return await subscribers.AddAsync(channelId);
+            return await subscribers.AddAsync(channelId).ConfigureAwait(false);
         }
 
         public IAsyncEnumerable<ulong> GetSubscribers(InfoType infoType)

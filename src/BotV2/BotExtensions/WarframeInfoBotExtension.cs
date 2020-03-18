@@ -88,7 +88,7 @@ namespace BotV2.BotExtensions
                         this.ExpireInvasions(combinedSource.Token),
                         this.UpdateCetusMessages(combinedSource.Token),
                         Task.Delay(this._pollRate, combinedSource.Token)
-                    );
+                    ).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -117,14 +117,14 @@ namespace BotV2.BotExtensions
                 }
 
                 var processedMarker = globalStore.GetObjectResource<bool>($"{WarframeInfoBotExtension.ProcessedAlertsKey}:{alert.Id}");
-                if ((await processedMarker.Set(true)).TryGetValue(out var wasAlreadyProcessed) && wasAlreadyProcessed)
+                if ((await processedMarker.Set(true).ConfigureAwait(false)).TryGetValue(out var wasAlreadyProcessed) && wasAlreadyProcessed)
                 {
                     continue;
                 }
 
                 var now = DateTimeOffset.UtcNow;
                 var expiryBase = now > alert.ExpiresAt ? now : alert.ExpiresAt;
-                await processedMarker.SetExpiry(expiryBase + this._historyLength * 2 + this._pollRate * 2);
+                await processedMarker.SetExpiry(expiryBase + this._historyLength * 2 + this._pollRate * 2).ConfigureAwait(false);
                 yield return alert;
             }
         }
@@ -133,20 +133,20 @@ namespace BotV2.BotExtensions
         {
             var globalStore = this._dataService.GetGlobalStore();
             var alertExpiry = globalStore.GetDelayedTaskQueueResource<MessagePointer>(WarframeInfoBotExtension.AlertExpiryKey);
-            var newAlerts = await this.GetNewAlerts(cancellation).ToListAsync(cancellation);
+            var newAlerts = await this.GetNewAlerts(cancellation).ToListAsync(cancellation).ConfigureAwait(false);
             await foreach (var subscriber in this._infoService.GetSubscribers(WarframeInfoService.InfoType.Alerts).WithCancellation(cancellation))
             {
                 foreach (var alert in newAlerts)
                 {
-                    var channel = await this.Client.GetChannelAsync(subscriber);
+                    var channel = await this.Client.GetChannelAsync(subscriber).ConfigureAwait(false);
                     var (content, embed) = this.GetAlertMessage(channel, alert);
-                    var msg = await channel.SendMessageAsync(content: content, embed: embed);
+                    var msg = await channel.SendMessageAsync(content: content, embed: embed).ConfigureAwait(false);
                     var endTime = alert.ExpiresAt;
 
                     try
                     {
-                        await this._timedMessageService.RemoveAfter(msg, endTime + this._historyLength);
-                        await alertExpiry.AddAsync(new MessagePointer(msg), endTime + this._historyLength);
+                        await this._timedMessageService.RemoveAfter(msg, endTime + this._historyLength).ConfigureAwait(false);
+                        await alertExpiry.AddAsync(new MessagePointer(msg), endTime + this._historyLength).ConfigureAwait(false);
                         this._logger.LogTrace($"Created message for alert {alert.Id} in {subscriber}.");
                     }
                     catch (Exception ex)
@@ -175,14 +175,14 @@ namespace BotV2.BotExtensions
                 }
 
                 var processedMarker = globalStore.GetObjectResource<object?>($"{WarframeInfoBotExtension.ProcessedInvasionsKey}:{invasion.Id}");
-                if (!await processedMarker.TrySet(new object()))
+                if (!await processedMarker.TrySet(new object()).ConfigureAwait(false))
                 {
                     continue;
                 }
 
                 var now = DateTimeOffset.UtcNow;
                 var expiryBase = now > invasion.ActivatedAt ? now : invasion.ActivatedAt;
-                await processedMarker.SetExpiry(expiryBase + this._invasionTtl * 2 + this._pollRate * 2);
+                await processedMarker.SetExpiry(expiryBase + this._invasionTtl * 2 + this._pollRate * 2).ConfigureAwait(false);
                 yield return invasion;
             }
         }
@@ -190,25 +190,25 @@ namespace BotV2.BotExtensions
         private async Task GenerateInvasionMessages(CancellationToken cancellation = default)
         {
             var globalStore = this._dataService.GetGlobalStore();
-            var newInvasions = await this.GetNewInvasions(cancellation).ToListAsync(cancellation);
+            var newInvasions = await this.GetNewInvasions(cancellation).ToListAsync(cancellation).ConfigureAwait(false);
             await foreach (var subscriber in this._infoService.GetSubscribers(WarframeInfoService.InfoType.Invasions).WithCancellation(cancellation))
             {
                 foreach (var invasion in newInvasions)
                 {
-                    var channel = await this.Client.GetChannelAsync(subscriber);
+                    var channel = await this.Client.GetChannelAsync(subscriber).ConfigureAwait(false);
                     var (content, embed) = this.GetInvasionEmbed(channel, invasion);
-                    var msg = await channel.SendMessageAsync(content: content, embed: embed);
+                    var msg = await channel.SendMessageAsync(content: content, embed: embed).ConfigureAwait(false);
                     var removeAfter = invasion.ActivatedAt + this._invasionTtl;
 
                     try
                     {
                         // Track the invasion
                         var invasionMessages = globalStore.GetSetResource<MessagePointer>($"{WarframeInfoBotExtension.ActiveInvasionsKey}:{invasion.Id}");
-                        await invasionMessages.AddAsync(new MessagePointer(msg));
-                        await invasionMessages.SetExpiry(removeAfter);
+                        await invasionMessages.AddAsync(new MessagePointer(msg)).ConfigureAwait(false);
+                        await invasionMessages.SetExpiry(removeAfter).ConfigureAwait(false);
 
                         // Automatically remove invasion alert after a while
-                        await this._timedMessageService.RemoveAfter(msg, removeAfter);
+                        await this._timedMessageService.RemoveAfter(msg, removeAfter).ConfigureAwait(false);
 
                         this._logger.LogTrace($"Created message for invasion {invasion.Id} in {subscriber}.");
                     }
@@ -225,9 +225,9 @@ namespace BotV2.BotExtensions
             var globalStore = this._dataService.GetGlobalStore();
             var lastStatus = globalStore.GetObjectResource<bool>(WarframeInfoBotExtension.CetusStatusKey);
             var cetusMessages = globalStore.GetSetResource<MessagePointer>(WarframeInfoBotExtension.CetusMessagesKey);
-            var cetusStatus = await this._wfClient.GetCetusStatus(cancellation);
+            var cetusStatus = await this._wfClient.GetCetusStatus(cancellation).ConfigureAwait(false);
 
-            if ((await lastStatus.Set(cetusStatus.IsDay)).TryGetValue(out var lastStatusValue) && lastStatusValue == cetusStatus.IsDay)
+            if ((await lastStatus.Set(cetusStatus.IsDay).ConfigureAwait(false)).TryGetValue(out var lastStatusValue) && lastStatusValue == cetusStatus.IsDay)
             {
                 return;
             }
@@ -236,9 +236,9 @@ namespace BotV2.BotExtensions
             {
                 try
                 {
-                    if (await messagePointer.TryGetMessage(this.Client) is {} message)
+                    if (await messagePointer.TryGetMessage(this.Client).ConfigureAwait(false) is {} message)
                     {
-                        await message.TryDeleteAsync();
+                        await message.TryDeleteAsync().ConfigureAwait(false);
                     }
                 }
                 catch (Exception ex)
@@ -249,14 +249,14 @@ namespace BotV2.BotExtensions
 
             await foreach (var subscriber in this._infoService.GetSubscribers(WarframeInfoService.InfoType.Cetus).WithCancellation(cancellation))
             {
-                var channel = await this.Client.GetChannelAsync(subscriber);
+                var channel = await this.Client.GetChannelAsync(subscriber).ConfigureAwait(false);
                 var (content, embed) = this.GetCetusEmbed(channel, cetusStatus);
-                var msg = await channel.SendMessageAsync(content: content, embed: embed);
+                var msg = await channel.SendMessageAsync(content: content, embed: embed).ConfigureAwait(false);
 
                 try
                 {
-                    await this._timedMessageService.RemoveAfter(msg, cetusStatus.ExpiresAt + this._pollRate * 2 + TimeSpan.FromMinutes(5));
-                    await cetusMessages.AddAsync(new MessagePointer(msg));
+                    await this._timedMessageService.RemoveAfter(msg, cetusStatus.ExpiresAt + this._pollRate * 2 + TimeSpan.FromMinutes(5)).ConfigureAwait(false);
+                    await cetusMessages.AddAsync(new MessagePointer(msg)).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -274,10 +274,10 @@ namespace BotV2.BotExtensions
                 try
                 {
                     // Try to mark the message as expired
-                    if (await messagePointer.TryGetMessage(this.Client) is { } message && message.Embeds.FirstOrDefault() is { } embed)
+                    if (await messagePointer.TryGetMessage(this.Client).ConfigureAwait(false) is { } message && message.Embeds.FirstOrDefault() is { } embed)
                     {
                         var builder = new DiscordEmbedBuilder(embed).WithColor(new DiscordColor(this._config.CurrentValue.ExpiredColor ?? "#000000"));
-                        await message.ModifyAsync(embed: builder.Build());
+                        await message.ModifyAsync(embed: builder.Build()).ConfigureAwait(false);
                     }
                 }
                 catch (Exception ex)
@@ -290,7 +290,7 @@ namespace BotV2.BotExtensions
         private async Task ExpireInvasions(CancellationToken cancellation)
         {
             var globalStore = this._dataService.GetGlobalStore();
-            foreach (var invasion in await this._wfClient.GetInvasionsAsync(cancellation))
+            foreach (var invasion in await this._wfClient.GetInvasionsAsync(cancellation).ConfigureAwait(false))
             {
                 if (!invasion.Completed)
                 {
@@ -304,12 +304,12 @@ namespace BotV2.BotExtensions
                     try
                     {
                         // Try to mark the message as expired
-                        if (await messagePointer.TryGetMessage(this.Client) is { } message && message.Embeds.FirstOrDefault() is { } embed)
+                        if (await messagePointer.TryGetMessage(this.Client).ConfigureAwait(false) is { } message && message.Embeds.FirstOrDefault() is { } embed)
                         {
-                            await this._timedMessageService.RemoveAfter(message, DateTimeOffset.UtcNow + this._historyLength);
+                            await this._timedMessageService.RemoveAfter(message, DateTimeOffset.UtcNow + this._historyLength).ConfigureAwait(false);
 
                             var builder = new DiscordEmbedBuilder(embed).WithColor(new DiscordColor(this._config.CurrentValue.ExpiredColor ?? "#000000"));
-                            await message.TryModifyAsync(embed: builder.Build());
+                            await message.TryModifyAsync(embed: builder.Build()).ConfigureAwait(false);
                         }
                     }
                     catch (Exception ex)
@@ -324,16 +324,16 @@ namespace BotV2.BotExtensions
         {
             var globalStore = this._dataService.GetGlobalStore();
             var cetusMessages = globalStore.GetSetResource<MessagePointer>(WarframeInfoBotExtension.CetusMessagesKey);
-            var cetusStatus = await this._wfClient.GetCetusStatus(cancellation);
+            var cetusStatus = await this._wfClient.GetCetusStatus(cancellation).ConfigureAwait(false);
 
             await foreach (var messagePointer in cetusMessages)
             {
                 try
                 {
-                    if (await messagePointer.TryGetMessage(this.Client) is { } message)
+                    if (await messagePointer.TryGetMessage(this.Client).ConfigureAwait(false) is { } message)
                     {
                         var (_, embed) = this.GetCetusEmbed(message.Channel, cetusStatus);
-                        await message.TryModifyAsync(embed: embed);
+                        await message.TryModifyAsync(embed: embed).ConfigureAwait(false);
                     }
                 }
                 catch (Exception ex)

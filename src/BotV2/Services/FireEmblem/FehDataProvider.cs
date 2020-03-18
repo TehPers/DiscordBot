@@ -64,7 +64,7 @@ namespace BotV2.Services.FireEmblem
         private async Task<IEnumerable<KeyValuePair<string, string>>> Get(string sheetName, string query)
         {
             // Find the key with the given name
-            var sheetData = await this.GetRawData(sheetName);
+            var sheetData = await this.GetRawData(sheetName).ConfigureAwait(false);
             if (sheetData.TryGetValue(query, out var entry))
             {
                 return entry;
@@ -96,7 +96,7 @@ namespace BotV2.Services.FireEmblem
             }
 
             // Prevent multiple threads from loading the sheet at once
-            await this._cacheUpdate.WaitAsync();
+            await this._cacheUpdate.WaitAsync().ConfigureAwait(false);
             try
             {
                 // Double-check that the dictionary hasn't been updated
@@ -106,7 +106,7 @@ namespace BotV2.Services.FireEmblem
                 }
 
                 this._logger.LogDebug($"Reloading sheet '{sheetName}'");
-                var sheet = await this.LoadSheet(sheetName);
+                var sheet = await this.LoadSheet(sheetName).ConfigureAwait(false);
                 return this._cache.GetOrAdd(sheetName, sheet);
             }
             finally
@@ -120,7 +120,7 @@ namespace BotV2.Services.FireEmblem
             // Get the spreadsheet's metadata
             var spreadsheetDataRequest = this._sheets.Spreadsheets.Get(this._configMonitor.CurrentValue.SheetId);
             spreadsheetDataRequest.PrettyPrint = false;
-            var spreadsheetData = await spreadsheetDataRequest.ExecuteAsync();
+            var spreadsheetData = await spreadsheetDataRequest.ExecuteAsync().ConfigureAwait(false);
             if (spreadsheetData == null)
             {
                 throw new OperationFailedException("The spreadsheet could not be loaded.");
@@ -136,7 +136,7 @@ namespace BotV2.Services.FireEmblem
             var request = this._sheets.Spreadsheets.Values.Get(this._configMonitor.CurrentValue.SheetId, $"'{sheet.Properties.Title}'!A1:{sheet.Properties.GridProperties.RowCount}");
             request.PrettyPrint = false;
             request.MajorDimension = SpreadsheetsResource.ValuesResource.GetRequest.MajorDimensionEnum.COLUMNS;
-            var values = await request.ExecuteAsync();
+            var values = await request.ExecuteAsync().ConfigureAwait(false);
             if (values.Values.Count == 0)
             {
                 throw new OperationFailedException($"The sheet '{sheetName}' is empty.");

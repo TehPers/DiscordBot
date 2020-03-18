@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using BotV2.Services.Data.Database;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
 using DSharpPlus.Exceptions;
 using StackExchange.Redis;
 
@@ -15,8 +17,11 @@ namespace BotV2.CommandModules
 {
     [Group("admin")]
     [RequireOwner]
+    [SuppressMessage("ReSharper", "UnusedMember.Global", Justification = "Methods are called via reflection.")]
     public sealed class AdminModule : BaseCommandModule
     {
+        private static readonly Regex UserPattern = new Regex(@"^<@(?<id>\d+)>|(?<id>\d+)|(?<name>.+#\d\d\d\d)$");
+
         private readonly CommandConfigurationService _commandConfiguration;
         private readonly CommandsNextExtension _commandsNext;
 
@@ -39,12 +44,68 @@ namespace BotV2.CommandModules
         {
             if (!(this._commandsNext.FindCommand(cmdName, out _) is { } cmd))
             {
-                await context.RespondAsync($"Unknown command {cmdName}");
+                await context.RespondAsync($"Unknown command {cmdName}").ConfigureAwait(false);
                 return;
             }
 
-            await this._commandConfiguration.SetCommandEnabled(cmd, context.Channel.GuildId, enabled);
-            await context.RespondAsync($"{(enabled ? "Enabled" : "Disabled")} {cmd.QualifiedName}");
+            await this._commandConfiguration.SetCommandEnabled(cmd, context.Channel.GuildId, enabled).ConfigureAwait(false);
+            await context.RespondAsync($"{(enabled ? "Enabled" : "Disabled")} {cmd.QualifiedName}").ConfigureAwait(false);
+        }
+
+        [Command("sudo")]
+        [Description("Executes a command as another user.")]
+        public async Task Sudo(
+            CommandContext context,
+            [Description("The user to execute the command as.")]
+            string user,
+            [Description("The command to execute at that user.")] [RemainingText]
+            string command
+        )
+        {
+            if (!(this._commandsNext.FindCommand(command, out var args) is { } cmd))
+            {
+                await context.RespondAsync("Command not found.").ConfigureAwait(false);
+                return;
+            }
+
+            if (!await this._commandConfiguration.IsCommandEnabled(cmd, context.Channel.GuildId).ConfigureAwait(false))
+            {
+                await context.RespondAsync("Command is disabled.").ConfigureAwait(false);
+                return;
+            }
+
+            if (AdminModule.UserPattern.Match(user) is { Success: true } match)
+            {
+                DiscordUser? newUser = null;
+                if (match.Groups["id"] is { Success: true, Value: { } matchedId })
+                {
+                    if (!ulong.TryParse(matchedId, out var id))
+                    {
+                        await context.RespondAsync("Invalid user ID.").ConfigureAwait(false);
+                        return;
+                    }
+
+                    newUser = await context.Client.GetUserAsync(id).ConfigureAwait(false);
+                }
+                else if (match.Groups["name"] is { Success: true, Value: { } matchedName })
+                {
+                    newUser = context.Channel.Users.FirstOrDefault(u => string.Equals(matchedName, $"{u.Username}#{u.Discriminator}", StringComparison.OrdinalIgnoreCase));
+                    if (newUser is null && context.Channel.Guild is { } guild)
+                    {
+                        var allUsers = await guild.GetAllMembersAsync().ConfigureAwait(false);
+                        newUser = allUsers.FirstOrDefault(u => string.Equals(matchedName, $"{u.Username}#{u.Discriminator}", StringComparison.OrdinalIgnoreCase));
+                    }
+                }
+
+                if (newUser is null)
+                {
+                    await context.RespondAsync("Could not find the user.").ConfigureAwait(false);
+                    return;
+                }
+
+                var newContext = this._commandsNext.CreateFakeContext(newUser, context.Channel, $"{context.User.Mention} {command}", context.User.Mention, cmd, args);
+                await this._commandsNext.ExecuteCommandAsync(newContext).ConfigureAwait(false);
+            }
         }
 
         [Group("messages")]
@@ -78,43 +139,43 @@ namespace BotV2.CommandModules
                 {
                     if (!(MessageGroup.UrlPattern.Match(link) is { Success: true } match))
                     {
-                        await context.RespondAsync("Message link is invalid.");
+                        await context.RespondAsync("Message link is invalid.").ConfigureAwait(false);
                         return;
                     }
 
                     if (!ulong.TryParse(match.Groups["channelId"].Value, out var channelId))
                     {
-                        await context.RespondAsync("Unable to parse channel ID.");
+                        await context.RespondAsync("Unable to parse channel ID.").ConfigureAwait(false);
                         return;
                     }
 
                     if (!ulong.TryParse(match.Groups["messageId"].Value, out var messageId))
                     {
-                        await context.RespondAsync("Unable to parse message ID.");
+                        await context.RespondAsync("Unable to parse message ID.").ConfigureAwait(false);
                         return;
                     }
 
-                    if (!(await new MessagePointer(messageId, channelId).TryGetMessage(context.Client) is { } message))
+                    if (!(await new MessagePointer(messageId, channelId).TryGetMessage(context.Client).ConfigureAwait(false) is { } message))
                     {
-                        await context.RespondAsync("Message not found.");
+                        await context.RespondAsync("Message not found.").ConfigureAwait(false);
                         return;
                     }
 
                     if (message.Author != context.Client.CurrentUser)
                     {
-                        await context.RespondAsync("Message was sent by somebody else.");
+                        await context.RespondAsync("Message was sent by somebody else.").ConfigureAwait(false);
                         return;
                     }
 
-                    await message.ModifyAsync(content: contents);
+                    await message.ModifyAsync(content: contents).ConfigureAwait(false);
                 }
                 catch (UnauthorizedException)
                 {
-                    await context.RespondAsync("Insufficient permissions.");
+                    await context.RespondAsync("Insufficient permissions.").ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
-                    await context.RespondAsync($"An error occurred:\n```\n{ex}\n```");
+                    await context.RespondAsync($"An error occurred:\n```\n{ex}\n```").ConfigureAwait(false);
                 }
             }
 
@@ -130,37 +191,37 @@ namespace BotV2.CommandModules
                 {
                     if (!(MessageGroup.UrlPattern.Match(link) is {Success: true} match))
                     {
-                        await context.RespondAsync("Message link is invalid.");
+                        await context.RespondAsync("Message link is invalid.").ConfigureAwait(false);
                         return;
                     }
 
                     if (!ulong.TryParse(match.Groups["channelId"].Value, out var channelId))
                     {
-                        await context.RespondAsync("Unable to parse channel ID.");
+                        await context.RespondAsync("Unable to parse channel ID.").ConfigureAwait(false);
                         return;
                     }
 
                     if (!ulong.TryParse(match.Groups["messageId"].Value, out var messageId))
                     {
-                        await context.RespondAsync("Unable to parse message ID.");
+                        await context.RespondAsync("Unable to parse message ID.").ConfigureAwait(false);
                         return;
                     }
 
-                    if (!(await new MessagePointer(messageId, channelId).TryGetMessage(context.Client) is { } message))
+                    if (!(await new MessagePointer(messageId, channelId).TryGetMessage(context.Client).ConfigureAwait(false) is { } message))
                     {
-                        await context.RespondAsync("Message not found.");
+                        await context.RespondAsync("Message not found.").ConfigureAwait(false);
                         return;
                     }
 
-                    await message.DeleteAsync();
+                    await message.DeleteAsync().ConfigureAwait(false);
                 }
                 catch (UnauthorizedException)
                 {
-                    await context.RespondAsync("Insufficient permissions.");
+                    await context.RespondAsync("Insufficient permissions.").ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
-                    await context.RespondAsync($"An error occurred:\n```\n{ex}\n```");
+                    await context.RespondAsync($"An error occurred:\n```\n{ex}\n```").ConfigureAwait(false);
                 }
             }
         }
@@ -189,13 +250,13 @@ namespace BotV2.CommandModules
             {
                 try
                 {
-                    var db = await this._dbFactory.GetDatabase();
-                    var response = FormatResult(await db.ExecuteAsync(command, args.Cast<object>().ToArray()));
-                    await context.RespondAsync($"```\n{response}\n```");
+                    var db = await this._dbFactory.GetDatabase().ConfigureAwait(false);
+                    var response = FormatResult(await db.ExecuteAsync(command, args.Cast<object>().ToArray()).ConfigureAwait(false));
+                    await context.RespondAsync($"```\n{response}\n```").ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
-                    await context.RespondAsync($"An error occurred:\n```\n{ex.Message}\n```");
+                    await context.RespondAsync($"An error occurred:\n```\n{ex.Message}\n```").ConfigureAwait(false);
                 }
 
                 static string FormatResult(RedisResult? result)

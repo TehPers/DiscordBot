@@ -37,7 +37,7 @@ namespace BotV2.BotExtensions
             try
             {
                 this._tokenSource.Cancel();
-                await Task.WhenAll(this._parallelTasks);
+                await Task.WhenAll(this._parallelTasks).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {

@@ -14,7 +14,7 @@ namespace BotV2.Extensions
 
             try
             {
-                return new Option<DiscordMessage>(await message.ModifyAsync(content, embed));
+                return new Option<DiscordMessage>(await message.ModifyAsync(content, embed).ConfigureAwait(false));
             }
             catch (NotFoundException)
             {
@@ -28,7 +28,7 @@ namespace BotV2.Extensions
 
             try
             {
-                await message.DeleteAsync(reason);
+                await message.DeleteAsync(reason).ConfigureAwait(false);
                 return true;
             }
             catch (NotFoundException)

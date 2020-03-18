@@ -38,7 +38,7 @@ namespace BotV2.BotExtensions
                 }
             }
 
-            commands.CommandErrored += args =>
+            this._commandsNext.CommandErrored += args =>
             {
                 switch (args.Context)
                 {
@@ -54,7 +54,7 @@ namespace BotV2.BotExtensions
                 }
             };
 
-            commands.CommandExecuted += args =>
+            this._commandsNext.CommandExecuted += args =>
             {
                 logger.LogTrace($"{args.Context.Member?.Username ?? "??"} ({args.Context.Member?.Id.ToString() ?? "??"}) executed {args.Command.QualifiedName} successfully");
                 return Task.CompletedTask;
@@ -82,7 +82,7 @@ namespace BotV2.BotExtensions
             var isMention = cmdStart != -1;
             if (cmdStart == -1)
             {
-                var prefixes = new[] { this._configuration["CommandPrefix"] ?? "t!" };
+                var prefixes = new[] {this._configuration["CommandPrefix"] ?? "t!"};
                 for (var i = 0; i < prefixes.Length && cmdStart == -1; i++)
                 {
                     cmdStart = msg.GetStringPrefixLength(prefixes[i]);
@@ -106,13 +106,23 @@ namespace BotV2.BotExtensions
                 return;
             }
 
-            if (!await this._commandConfiguration.IsCommandEnabled(cmd, msg.Channel.GuildId))
+            if (!await this._commandConfiguration.IsCommandEnabled(cmd, msg.Channel.GuildId).ConfigureAwait(false))
             {
                 return;
             }
 
             var context = this._commandsNext.CreateContext(msg, prefix, cmd, args);
-            _ = Task.Run(() => this._commandsNext.ExecuteCommandAsync(context));
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await this._commandsNext.ExecuteCommandAsync(context).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    await context.RespondAsync($"An error has occurred:\n```\n{ex.Message}\n```").ConfigureAwait(false);
+                }
+            });
         }
 
         public void Dispose()

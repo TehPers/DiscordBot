@@ -45,12 +45,12 @@ namespace BotV2.BotExtensions
                 {
                     try
                     {
-                        if (!(await removed.TryGetMessage(this.Client) is { } message))
+                        if (!(await removed.TryGetMessage(this.Client).ConfigureAwait(false) is { } message))
                         {
                             continue;
                         }
 
-                        await message.TryDeleteAsync();
+                        await message.TryDeleteAsync().ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
@@ -58,7 +58,7 @@ namespace BotV2.BotExtensions
                     }
                 }
 
-                await Task.Delay(TimeSpan.FromMinutes(1), cancellation);
+                await Task.Delay(TimeSpan.FromMinutes(1), cancellation).ConfigureAwait(false);
             }
         }
 

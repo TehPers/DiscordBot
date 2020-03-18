@@ -33,7 +33,7 @@ namespace BotV2.Models
 
             try
             {
-                if (await client.GetChannelAsync(this.ChannelId) is { } channel)
+                if (await client.GetChannelAsync(this.ChannelId).ConfigureAwait(false) is { } channel)
                 {
                     return await channel.GetMessageAsync(this.MessageId).ConfigureAwait(false);
                 }

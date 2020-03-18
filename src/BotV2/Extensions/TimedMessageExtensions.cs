@@ -30,8 +30,8 @@ namespace BotV2.Extensions
             _ = message ?? throw new ArgumentNullException(nameof(message));
             _ = timedMessages ?? throw new ArgumentNullException(nameof(timedMessages));
 
-            var reply = await message.RespondAsync(content, tts, embed);
-            await timedMessages.RemoveAfter(reply, removeAfter);
+            var reply = await message.RespondAsync(content, tts, embed).ConfigureAwait(false);
+            await timedMessages.RemoveAfter(reply, removeAfter).ConfigureAwait(false);
             return reply;
         }
 
@@ -40,8 +40,8 @@ namespace BotV2.Extensions
             _ = channel ?? throw new ArgumentNullException(nameof(channel));
             _ = timedMessages ?? throw new ArgumentNullException(nameof(timedMessages));
 
-            var message = await channel.SendMessageAsync(content, tts, embed);
-            await timedMessages.RemoveAfter(message, removeAfter);
+            var message = await channel.SendMessageAsync(content, tts, embed).ConfigureAwait(false);
+            await timedMessages.RemoveAfter(message, removeAfter).ConfigureAwait(false);
             return message;
         }
     }

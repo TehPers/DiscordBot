@@ -24,8 +24,8 @@ namespace BotV2.Services.Data.Resources.SortedSets
 
         public async IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = new CancellationToken())
         {
-            var db = await this.DbFactory.GetDatabase();
-            foreach (var item in await db.SortedSetRangeByRankAsync(this.ResourceKey))
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            foreach (var item in await db.SortedSetRangeByRankAsync(this.ResourceKey).ConfigureAwait(false))
             {
                 yield return this.Serializer.FromString<T>(item);
             }
@@ -33,14 +33,14 @@ namespace BotV2.Services.Data.Resources.SortedSets
 
         public virtual async Task<bool> ContainsAsync(T item)
         {
-            var db = await this.DbFactory.GetDatabase();
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
             return db.SortedSetScoreAsync(this.ResourceKey, this.Serializer.ToString(item)) != null;
         }
 
         public virtual async Task<long> CountAsync()
         {
-            var db = await this.DbFactory.GetDatabase();
-            return await db.SortedSetLengthAsync(this.ResourceKey);
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            return await db.SortedSetLengthAsync(this.ResourceKey).ConfigureAwait(false);
         }
 
         Task IAsyncCollection<T>.AddAsync(T item)
@@ -50,33 +50,33 @@ namespace BotV2.Services.Data.Resources.SortedSets
 
         public virtual async Task<bool> AddAsync(T item)
         {
-            var db = await this.DbFactory.GetDatabase();
-            return await db.SortedSetAddAsync(this.ResourceKey, this.Serializer.ToString(item), item.Score);
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            return await db.SortedSetAddAsync(this.ResourceKey, this.Serializer.ToString(item), item.Score).ConfigureAwait(false);
         }
 
         public virtual async Task<bool> RemoveAsync(T item)
         {
-            var db = await this.DbFactory.GetDatabase();
-            return await db.SortedSetRemoveAsync(this.ResourceKey, this.Serializer.ToString(item));
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            return await db.SortedSetRemoveAsync(this.ResourceKey, this.Serializer.ToString(item)).ConfigureAwait(false);
         }
 
         public virtual async Task<bool> ClearAsync()
         {
-            var db = await this.DbFactory.GetDatabase();
-            return await db.KeyDeleteAsync(this.ResourceKey);
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            return await db.KeyDeleteAsync(this.ResourceKey).ConfigureAwait(false);
         }
 
         public virtual async Task<Option<T>> TryPeekAsync()
         {
-            var db = await this.DbFactory.GetDatabase();
-            var response = await db.SortedSetRangeByRankAsync(this.ResourceKey, 0, 1);
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            var response = await db.SortedSetRangeByRankAsync(this.ResourceKey, 0, 1).ConfigureAwait(false);
             return response.Any() ? new Option<T>(this.Serializer.FromString<T>(response[0])) : default;
         }
 
         public virtual async Task<Option<T>> TryPopAsync()
         {
-            var db = await this.DbFactory.GetDatabase();
-            return await db.SortedSetPopAsync(this.ResourceKey) is { } result ? new Option<T>(this.Serializer.FromString<T>(result.Element)) : default;
+            var db = await this.DbFactory.GetDatabase().ConfigureAwait(false);
+            return await db.SortedSetPopAsync(this.ResourceKey).ConfigureAwait(false) is { } result ? new Option<T>(this.Serializer.FromString<T>(result.Element)) : default;
         }
     }
 }

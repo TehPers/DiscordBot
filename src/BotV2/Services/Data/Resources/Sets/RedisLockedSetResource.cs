@@ -21,54 +21,54 @@ namespace BotV2.Services.Data.Resources.Sets
 
         public override async Task<bool> AddAsync(T item)
         {
-            if (!await this.ExtendLock())
+            if (!await this.ExtendLock().ConfigureAwait(false))
             {
                 throw new InvalidOperationException("The lock on the resource has timed out");
             }
 
-            return await base.AddAsync(item);
+            return await base.AddAsync(item).ConfigureAwait(false);
         }
 
         public override async Task<bool> ClearAsync()
         {
 
-            if (!await this.ExtendLock())
+            if (!await this.ExtendLock().ConfigureAwait(false))
             {
                 throw new InvalidOperationException("The lock on the resource has timed out");
             }
 
-            return await base.ClearAsync();
+            return await base.ClearAsync().ConfigureAwait(false);
         }
 
         public override async Task<bool> ContainsAsync(T item)
         {
-            if (!await this.ExtendLock())
+            if (!await this.ExtendLock().ConfigureAwait(false))
             {
                 throw new InvalidOperationException("The lock on the resource has timed out");
             }
 
-            return await base.ContainsAsync(item);
+            return await base.ContainsAsync(item).ConfigureAwait(false);
         }
 
         public override async Task<long> CountAsync()
         {
-            if (!await this.ExtendLock())
+            if (!await this.ExtendLock().ConfigureAwait(false))
             {
                 throw new InvalidOperationException("The lock on the resource has timed out");
             }
 
-            return await base.CountAsync();
+            return await base.CountAsync().ConfigureAwait(false);
         }
 
         public override async Task<bool> RemoveAsync(T item)
         {
 
-            if (!await this.ExtendLock())
+            if (!await this.ExtendLock().ConfigureAwait(false))
             {
                 throw new InvalidOperationException("The lock on the resource has timed out");
             }
 
-            return await base.RemoveAsync(item);
+            return await base.RemoveAsync(item).ConfigureAwait(false);
         }
 
         private Task<bool> ExtendLock()

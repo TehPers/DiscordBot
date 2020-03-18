@@ -29,7 +29,7 @@ namespace BotV2.Services.Messages
         {
             var messagePointer = new MessagePointer(message);
             var removeQueue = this.GetRemoveQueue();
-            await removeQueue.AddAsync(messagePointer, removeTime);
+            await removeQueue.AddAsync(messagePointer, removeTime).ConfigureAwait(false);
         }
     }
 }

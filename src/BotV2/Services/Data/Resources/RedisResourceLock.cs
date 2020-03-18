@@ -21,14 +21,14 @@ namespace BotV2.Services.Data.Resources
 
         public async Task<bool> ExtendLock(TimeSpan addedTime)
         {
-            var db = await this._dbFactory.GetDatabase();
-            return await db.LockExtendAsync(this._lockKey, this._instanceId.ToString(), addedTime);
+            var db = await this._dbFactory.GetDatabase().ConfigureAwait(false);
+            return await db.LockExtendAsync(this._lockKey, this._instanceId.ToString(), addedTime).ConfigureAwait(false);
         }
 
         public async ValueTask DisposeAsync()
         {
-            var db = await this._dbFactory.GetDatabase();
-            await db.LockReleaseAsync(this._lockKey, this._instanceId.ToString());
+            var db = await this._dbFactory.GetDatabase().ConfigureAwait(false);
+            await db.LockReleaseAsync(this._lockKey, this._instanceId.ToString()).ConfigureAwait(false);
         }
 
         public static string GetLockKey(string resourceKey)
@@ -40,11 +40,11 @@ namespace BotV2.Services.Data.Resources
         {
             var lockKey = RedisResourceLock.GetLockKey(resourceKey);
             var instanceId = Guid.NewGuid();
-            var db = await dbFactory.GetDatabase();
-            while (!await db.LockTakeAsync(lockKey, instanceId.ToString(), expiry))
+            var db = await dbFactory.GetDatabase().ConfigureAwait(false);
+            while (!await db.LockTakeAsync(lockKey, instanceId.ToString(), expiry).ConfigureAwait(false))
             {
-                await Task.Delay(100);
-                db = await dbFactory.GetDatabase();
+                await Task.Delay(100).ConfigureAwait(false);
+                db = await dbFactory.GetDatabase().ConfigureAwait(false);
             }
 
             return new RedisResourceLock(dbFactory, lockKey, instanceId);

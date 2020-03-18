@@ -13,7 +13,7 @@ namespace BotV2.Services.Data.Resources.SortedSets
 
         public async Task<ILockedSortedSetResource<T>> Reserve(TimeSpan expiry)
         {
-            var resourceLock = await RedisResourceLock.Acquire(this.DbFactory, this.ResourceKey, expiry);
+            var resourceLock = await RedisResourceLock.Acquire(this.DbFactory, this.ResourceKey, expiry).ConfigureAwait(false);
             return new RedisLockedSortedSetResource<T>(this.DbFactory, this.ResourceKey, this.Serializer, resourceLock);
         }
     }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using BotV2.Extensions;
 using BotV2.Services;
@@ -11,6 +12,7 @@ namespace BotV2.CommandModules.Warframe
 {
     [Group("wfinfo")]
     [RequireOwner]
+    [SuppressMessage("ReSharper", "UnusedMember.Global", Justification = "Methods are called via reflection.")]
     public sealed class WarframeInfoModule : BaseCommandModule
     {
         private static readonly TimeSpan ResponseExpiry = TimeSpan.FromMinutes(0.25);
@@ -34,8 +36,8 @@ namespace BotV2.CommandModules.Warframe
             {
                 _ = context ?? throw new ArgumentNullException(nameof(context));
 
-                var enabled = await this._infoService.ToggleSubscription(context.Channel.Id, WarframeInfoService.InfoType.Alerts);
-                await this._timedMessageService.TimedRespondAsync(context, DateTimeOffset.UtcNow + WarframeInfoModule.ResponseExpiry, $"Alerts {(enabled ? "enabled" : "disabled")}");
+                var enabled = await this._infoService.ToggleSubscription(context.Channel.Id, WarframeInfoService.InfoType.Alerts).ConfigureAwait(false);
+                await this._timedMessageService.TimedRespondAsync(context, DateTimeOffset.UtcNow + WarframeInfoModule.ResponseExpiry, $"Alerts {(enabled ? "enabled" : "disabled")}").ConfigureAwait(false);
             }
         }
 
@@ -58,8 +60,8 @@ namespace BotV2.CommandModules.Warframe
             {
                 _ = context ?? throw new ArgumentNullException(nameof(context));
 
-                var enabled = await this._infoService.ToggleSubscription(context.Channel.Id, WarframeInfoService.InfoType.Invasions);
-                await this._timedMessageService.TimedRespondAsync(context, DateTimeOffset.UtcNow + WarframeInfoModule.ResponseExpiry, $"Invasions {(enabled ? "enabled" : "disabled")}");
+                var enabled = await this._infoService.ToggleSubscription(context.Channel.Id, WarframeInfoService.InfoType.Invasions).ConfigureAwait(false);
+                await this._timedMessageService.TimedRespondAsync(context, DateTimeOffset.UtcNow + WarframeInfoModule.ResponseExpiry, $"Invasions {(enabled ? "enabled" : "disabled")}").ConfigureAwait(false);
             }
         }
 
@@ -82,8 +84,8 @@ namespace BotV2.CommandModules.Warframe
             {
                 _ = context ?? throw new ArgumentNullException(nameof(context));
 
-                var enabled = await this._infoService.ToggleSubscription(context.Channel.Id, WarframeInfoService.InfoType.Cetus);
-                await this._timedMessageService.TimedRespondAsync(context, DateTimeOffset.UtcNow + WarframeInfoModule.ResponseExpiry, $"Cetus day/night cycles {(enabled ? "enabled" : "disabled")}");
+                var enabled = await this._infoService.ToggleSubscription(context.Channel.Id, WarframeInfoService.InfoType.Cetus).ConfigureAwait(false);
+                await this._timedMessageService.TimedRespondAsync(context, DateTimeOffset.UtcNow + WarframeInfoModule.ResponseExpiry, $"Cetus day/night cycles {(enabled ? "enabled" : "disabled")}").ConfigureAwait(false);
             }
         }
     }

@@ -17,12 +17,12 @@ namespace BotV2.Services.Data.Resources.DelayedTaskQueues
 
         public new async Task<Option<T>> TryPopAsync()
         {
-            if (!await this.ExtendLock())
+            if (!await this.ExtendLock().ConfigureAwait(false))
             {
                 throw new InvalidOperationException("The lock on the resource has timed out");
             }
 
-            var poppedRaw = await base.TryPopAsync();
+            var poppedRaw = await base.TryPopAsync().ConfigureAwait(false);
             if (!(poppedRaw.TryGetValue(out var item) && item is { }))
             {
                 return default;
@@ -31,7 +31,7 @@ namespace BotV2.Services.Data.Resources.DelayedTaskQueues
             var now = DateTimeOffset.UtcNow;
             if (item.Availabile > now)
             {
-                await this.AddAsync(item);
+                await this.AddAsync(item).ConfigureAwait(false);
                 return default;
             }
 
