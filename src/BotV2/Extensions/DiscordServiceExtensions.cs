@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Linq;
 using BotV2.BotExtensions;
+using BotV2.CommandChecks;
+using BotV2.CommandModules;
 using BotV2.Models;
 using BotV2.Services.Commands;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.CommandsNext.Converters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -46,15 +50,33 @@ namespace BotV2.Extensions
             services.TryAddBotExtension<CommandBotExtension>();
             services.AddSingleton<CommandConfigurationService>();
             services.AddRedis();
+
+            // Config
+            services.AddSingleton(serviceProvider => new CommandsNextConfiguration
+            {
+                Services = serviceProvider,
+                UseDefaultCommandHandler = false,
+                EnableDefaultHelp = false,
+            });
+
+            // Commands extension
             services.AddSingleton(serviceProvider =>
             {
                 var client = serviceProvider.GetRequiredService<DiscordClient>();
-                return client.UseCommandsNext(new CommandsNextConfiguration
-                {
-                    Services = serviceProvider,
-                    UseDefaultCommandHandler = false,
-                });
+                var config = serviceProvider.GetRequiredService<CommandsNextConfiguration>();
+                return client.UseCommandsNext(config);
             });
+
+            // Default checks
+            services.TryAddEnumerable(new[]
+            {
+                ServiceDescriptor.Singleton<CheckBaseAttribute, HelpRequireMentionAttribute>(),
+                ServiceDescriptor.Singleton<CheckBaseAttribute, RequireEnabledAttribute>(),
+            });
+
+            // Custom help module
+            services.AddCommand<HelpModule>();
+            services.AddSingleton<IHelpFormatterFactory, HelpFormatterFactory<DefaultHelpFormatter>>();
 
             return services;
         }

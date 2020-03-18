@@ -23,7 +23,7 @@ namespace BotV2.Extensions
                 throw new InvalidOperationException("No help command defined");
             }
 
-            var prefix = context.User != null ? $"{context.User.Mention} " : string.Empty;
+            var prefix = $"{context.Client.CurrentUser.Mention} ";
             var newContext = context.CommandsNext.CreateFakeContext(context.User, context.Channel, $"{prefix}{invocation}", prefix, helpCmd, helpArgs);
             return context.CommandsNext.ExecuteCommandAsync(newContext);
         }

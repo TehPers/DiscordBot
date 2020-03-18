@@ -22,7 +22,7 @@ namespace BotV2
         {
             Console.WriteLine("Bot V2");
 
-            await using (var services = Startup.RegisterServices().BuildServiceProvider())
+            await using (Startup.RegisterServices().BuildServiceProvider().ConfigureAwait(false, out var services))
             {
                 var loggerFactory = services.GetRequiredService<ILoggerFactory>();
                 var logger = loggerFactory.CreateLogger(typeof(Startup));

@@ -103,14 +103,14 @@ namespace BotV2.CommandModules
                     return;
                 }
 
-                var newContext = this._commandsNext.CreateFakeContext(newUser, context.Channel, $"{context.User.Mention} {command}", context.User.Mention, cmd, args);
+                var newContext = this._commandsNext.CreateFakeContext(newUser, context.Channel, $"{context.Client.CurrentUser.Mention} {command}", context.Client.CurrentUser.Mention, cmd, args);
                 await this._commandsNext.ExecuteCommandAsync(newContext).ConfigureAwait(false);
             }
         }
 
         [Group("messages")]
         [Description("Manipulate messages.")]
-        public class MessageGroup : BaseCommandModule
+        public sealed class MessageGroup : BaseCommandModule
         {
             private static readonly Regex UrlPattern = new Regex(@"^https://discordapp\.com/channels/(?<guildId>\d+)/(?<channelId>\d+)/(?<messageId>\d+)$", RegexOptions.IgnoreCase);
 
@@ -228,7 +228,7 @@ namespace BotV2.CommandModules
 
         [Group("database")]
         [Description("Manipulate the database.")]
-        public class DatabaseGroup : BaseCommandModule
+        public sealed class DatabaseGroup : BaseCommandModule
         {
             private readonly IDatabaseFactory _dbFactory;
 
