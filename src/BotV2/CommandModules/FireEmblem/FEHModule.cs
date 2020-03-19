@@ -6,7 +6,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotV2.Extensions;
-using BotV2.Services.Commands;
 using BotV2.Services.FireEmblem;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
@@ -20,12 +19,10 @@ namespace BotV2.CommandModules.FireEmblem
     {
         private static readonly Regex HexColorRegex = new Regex("#?(?:(?<r>[0-9a-fA-F]{2})(?<g>[0-9a-fA-F]{2})(?<b>[0-9a-fA-F]{2})|(?<r>[0-9a-fA-F])(?<g>[0-9a-fA-F])(?<b>[0-9a-fA-F]))");
         private readonly IFehDataProvider _dataProvider;
-        private readonly EmbedService _embedService;
 
-        public FehModule(IFehDataProvider dataProvider, EmbedService embedService)
+        public FehModule(IFehDataProvider dataProvider)
         {
             this._dataProvider = dataProvider ?? throw new ArgumentNullException(nameof(dataProvider));
-            this._embedService = embedService ?? throw new ArgumentNullException(nameof(embedService));
         }
 
         [Command("reload")]
@@ -115,7 +112,7 @@ namespace BotV2.CommandModules.FireEmblem
 
         private DiscordEmbedBuilder FormatResponse(IEnumerable<KeyValuePair<string, string>> properties)
         {
-            var builder = this._embedService.CreateStandardEmbed();
+            var builder = new DiscordEmbedBuilder();
             builder.WithColor(new DiscordColor(1f, 0f, 0f));
             var description = new StringBuilder();
             if (properties is { })

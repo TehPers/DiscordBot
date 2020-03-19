@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using BotV2.BotExtensions;
 using BotV2.CommandChecks;
 using BotV2.CommandModules;
@@ -22,7 +21,6 @@ namespace BotV2.Extensions
             _ = config ?? throw new ArgumentNullException(nameof(config));
             _ = services ?? throw new ArgumentNullException(nameof(services));
 
-            services.TryAddSingleton<EmbedService>();
             services.TryAddSingleton(serviceProvider => new DiscordClient(serviceProvider.GetRequiredService<DiscordConfiguration>()));
             services.TryAddSingleton(_ => new DiscordConfiguration
             {
