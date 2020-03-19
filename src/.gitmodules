@@ -1,0 +1,3 @@
+[submodule "WarframeNET"]
+	path = WarframeNET
+	url = https://github.com/TehPers/warframe-net.git
