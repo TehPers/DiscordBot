@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using BotV2.Extensions;
 using BotV2.Models;
 using BotV2.Services.Commands;
 using BotV2.Services.Data.Database;
@@ -11,6 +12,8 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using DSharpPlus.Exceptions;
+using Microsoft.VisualBasic;
+using Microsoft.VisualBasic.CompilerServices;
 using StackExchange.Redis;
 
 namespace BotV2.CommandModules
@@ -24,11 +27,13 @@ namespace BotV2.CommandModules
 
         private readonly CommandConfigurationService _commandConfiguration;
         private readonly CommandsNextExtension _commandsNext;
+        private readonly DiscordClient _client;
 
-        public AdminModule(CommandConfigurationService commandConfiguration, CommandsNextExtension commandsNext)
+        public AdminModule(CommandConfigurationService commandConfiguration, CommandsNextExtension commandsNext, DiscordClient client)
         {
-            this._commandConfiguration = commandConfiguration;
-            this._commandsNext = commandsNext;
+            this._commandConfiguration = commandConfiguration ?? throw new ArgumentNullException(nameof(commandConfiguration));
+            this._commandsNext = commandsNext ?? throw new ArgumentNullException(nameof(commandsNext));
+            this._client = client ?? throw new ArgumentNullException(nameof(client));
         }
 
         [Command("setenabled")]
@@ -50,6 +55,38 @@ namespace BotV2.CommandModules
 
             await this._commandConfiguration.SetCommandEnabled(cmd, context.Channel.GuildId, enabled).ConfigureAwait(false);
             await context.RespondAsync($"{(enabled ? "Enabled" : "Disabled")} {cmd.QualifiedName}").ConfigureAwait(false);
+        }
+
+        [Command("stream")]
+        [Description("Continuously reads commands until the user says 'quit'.")]
+        public async Task Stream(CommandContext context)
+        {
+            while (await this._client.WaitForMessageAsync(msg => true).ConfigureAwait(false) is { Content: var command, Author: var author })
+            {
+                if (author != context.User)
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(command))
+                {
+                    continue;
+                }
+
+                if (string.Equals(command.Trim(), "quit", StringComparison.OrdinalIgnoreCase))
+                {
+                    break;
+                }
+
+                if (!(this._commandsNext.FindCommand(command, out var args) is { } cmd))
+                {
+                    await context.RespondAsync("Command not found.").ConfigureAwait(false);
+                    continue;
+                }
+
+                var newContext = this._commandsNext.CreateFakeContext(context.User, context.Channel, $"{context.Client.CurrentUser.Mention} {command}", context.Client.CurrentUser.Mention, cmd, args);
+                await this._commandsNext.ExecuteCommandAsync(newContext).ConfigureAwait(false);
+            }
         }
 
         [Command("sudo")]

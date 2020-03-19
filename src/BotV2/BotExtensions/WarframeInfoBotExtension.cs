@@ -140,7 +140,8 @@ namespace BotV2.BotExtensions
                 {
                     var channel = await this.Client.GetChannelAsync(subscriber).ConfigureAwait(false);
                     var (content, embed) = this.GetAlertMessage(channel, alert);
-                    var msg = await channel.SendMessageAsync(content: content, embed: embed).ConfigureAwait(false);
+                    var msg = await channel.SendMessageAsync(content, embed: embed).ConfigureAwait(false);
+                    await msg.TryPinSilentlyAsync(this.Client, true).ConfigureAwait(false);
                     var endTime = alert.ExpiresAt;
 
                     try
@@ -197,7 +198,8 @@ namespace BotV2.BotExtensions
                 {
                     var channel = await this.Client.GetChannelAsync(subscriber).ConfigureAwait(false);
                     var (content, embed) = this.GetInvasionEmbed(channel, invasion);
-                    var msg = await channel.SendMessageAsync(content: content, embed: embed).ConfigureAwait(false);
+                    var msg = await channel.SendMessageAsync(content, embed: embed).ConfigureAwait(false);
+                    await msg.TryPinSilentlyAsync(this.Client, true).ConfigureAwait(false);
                     var removeAfter = invasion.ActivatedAt + this._invasionTtl;
 
                     try
@@ -251,7 +253,8 @@ namespace BotV2.BotExtensions
             {
                 var channel = await this.Client.GetChannelAsync(subscriber).ConfigureAwait(false);
                 var (content, embed) = this.GetCetusEmbed(channel, cetusStatus);
-                var msg = await channel.SendMessageAsync(content: content, embed: embed).ConfigureAwait(false);
+                var msg = await channel.SendMessageAsync(content, embed: embed).ConfigureAwait(false);
+                await msg.TryPinSilentlyAsync(this.Client, true).ConfigureAwait(false);
 
                 try
                 {
@@ -371,7 +374,7 @@ namespace BotV2.BotExtensions
                 .WithDescription(description.ToString())
                 .WithColor(new DiscordColor(this._config.CurrentValue.ActiveColor ?? "#000000"))
                 .WithTimestamp(alert.ActivatedAt)
-                .WithFooter(text: durationStr);
+                .WithFooter(durationStr);
 
             // Thumbnail
             if (this._config.CurrentValue.RewardIcons is { } rewardThumbnails)
