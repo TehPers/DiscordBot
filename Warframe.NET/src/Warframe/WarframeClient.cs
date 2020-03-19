@@ -11,7 +11,7 @@ using Warframe.World.Models;
 
 namespace Warframe
 {
-    public sealed class WarframeClient : IWarframeClient
+    public sealed class WarframeClient : IWarframeClient, IDisposable
     {
         private static Uri WarframeStatusEndpoint { get; } = new Uri("https://api.warframestat.us/");
         public static Uri PcEndpoint { get; } = new Uri(WarframeClient.WarframeStatusEndpoint, "pc/");

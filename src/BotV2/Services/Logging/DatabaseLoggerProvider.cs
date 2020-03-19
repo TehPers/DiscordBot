@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 using BotV2.Services.Data;
 using Microsoft.Extensions.Logging;
 
 namespace BotV2.Services.Logging
 {
-    public class DatabaseLoggerProvider : ILoggerProvider
+    public class DatabaseLoggerProvider : ILoggerProvider, IAsyncDisposable
     {
         private readonly ConcurrentDictionary<string, DatabaseLogger> _loggers;
         private readonly DatabaseLogWriter _logWriter;
@@ -23,11 +24,14 @@ namespace BotV2.Services.Logging
             _ = category ?? throw new ArgumentNullException(nameof(category));
             return this._loggers.GetOrAdd(category, _ => new DatabaseLogger(this._logWriter, category));
         }
-
+        
         public void Dispose()
         {
-            // TODO: Wait synchronously because there's no async disposal support
-            this._logWriter.DisposeAsync().GetAwaiter().GetResult();
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return this._logWriter.DisposeAsync();
         }
     }
 }
