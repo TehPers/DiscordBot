@@ -12,8 +12,6 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using DSharpPlus.Exceptions;
-using Microsoft.VisualBasic;
-using Microsoft.VisualBasic.CompilerServices;
 using StackExchange.Redis;
 
 namespace BotV2.CommandModules
@@ -23,7 +21,8 @@ namespace BotV2.CommandModules
     [SuppressMessage("ReSharper", "UnusedMember.Global", Justification = "Methods are called via reflection.")]
     public sealed class AdminModule : BaseCommandModule
     {
-        private static readonly Regex UserPattern = new Regex(@"^<@(?<id>\d+)>|(?<id>\d+)|(?<name>.+#\d\d\d\d)$");
+        private static readonly Regex UserPattern = new Regex(@"^<@!?(?<id>\d+)>|(?<id>\d+)|(?<name>.+#\d\d\d\d)$");
+        private static readonly Regex ChannelPattern = new Regex(@"^<#(?<id>\d+)>|(?<id>\d+)|#(?<name>\S+)$");
 
         private readonly CommandConfigurationService _commandConfiguration;
         private readonly CommandsNextExtension _commandsNext;
@@ -59,7 +58,11 @@ namespace BotV2.CommandModules
 
         [Command("stream")]
         [Description("Continuously reads commands until the user says 'quit'.")]
-        public async Task Stream(CommandContext context)
+        public async Task Stream(
+            CommandContext context,
+            [Description("The command group to execute commands from, like 'admin messages' or 'admin sudo @x'.")] [RemainingText]
+            string group
+        )
         {
             while (await this._client.WaitForMessageAsync(msg => true).ConfigureAwait(false) is { Content: var command, Author: var author })
             {
@@ -76,6 +79,11 @@ namespace BotV2.CommandModules
                 if (string.Equals(command.Trim(), "quit", StringComparison.OrdinalIgnoreCase))
                 {
                     break;
+                }
+
+                if (!string.IsNullOrEmpty(group))
+                {
+                    command = $"{group} {command}";
                 }
 
                 if (!(this._commandsNext.FindCommand(command, out var args) is { } cmd))
@@ -102,12 +110,6 @@ namespace BotV2.CommandModules
             if (!(this._commandsNext.FindCommand(command, out var args) is { } cmd))
             {
                 await context.RespondAsync("Command not found.").ConfigureAwait(false);
-                return;
-            }
-
-            if (!await this._commandConfiguration.IsCommandEnabled(cmd, context.Channel.GuildId).ConfigureAwait(false))
-            {
-                await context.RespondAsync("Command is disabled.").ConfigureAwait(false);
                 return;
             }
 
@@ -141,6 +143,57 @@ namespace BotV2.CommandModules
                 }
 
                 var newContext = this._commandsNext.CreateFakeContext(newUser, context.Channel, $"{context.Client.CurrentUser.Mention} {command}", context.Client.CurrentUser.Mention, cmd, args);
+                await this._commandsNext.ExecuteCommandAsync(newContext).ConfigureAwait(false);
+            }
+        }
+
+        [Command("sudochannel")]
+        [Description("Executes a command in another channel.")]
+        public async Task SudoChannel(
+            CommandContext context,
+            [Description("The channel to execute the command in.")]
+            string channel,
+            [Description("The command to execute at that user.")] [RemainingText]
+            string command
+        )
+        {
+            if (!(this._commandsNext.FindCommand(command, out var args) is { } cmd))
+            {
+                await context.RespondAsync("Command not found.").ConfigureAwait(false);
+                return;
+            }
+
+            if (AdminModule.ChannelPattern.Match(channel) is { Success: true } match)
+            {
+                DiscordChannel? newChannel = null;
+                if (match.Groups["id"] is { Success: true, Value: { } matchedId })
+                {
+                    if (!ulong.TryParse(matchedId, out var id))
+                    {
+                        await context.RespondAsync("Invalid channel ID.").ConfigureAwait(false);
+                        return;
+                    }
+
+                    newChannel = await context.Client.GetChannelAsync(id).ConfigureAwait(false);
+                }
+                else if (match.Groups["name"] is { Success: true, Value: { } matchedName })
+                {
+                    if (!(context.Guild is { } guild))
+                    {
+                        await context.RespondAsync("Channel name can only be used in a guild.").ConfigureAwait(false);
+                        return;
+                    }
+
+                    newChannel = guild.Channels.Values.FirstOrDefault(c => string.Equals(matchedName, $"#{c.Name}", StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (newChannel is null)
+                {
+                    await context.RespondAsync("Could not find the channel.").ConfigureAwait(false);
+                    return;
+                }
+
+                var newContext = this._commandsNext.CreateFakeContext(context.User, newChannel, $"{context.Client.CurrentUser.Mention} {command}", context.Client.CurrentUser.Mention, cmd, args);
                 await this._commandsNext.ExecuteCommandAsync(newContext).ConfigureAwait(false);
             }
         }

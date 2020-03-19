@@ -9,6 +9,7 @@ namespace BotV2.Extensions
         public static Task ShowHelp(this CommandContext context)
         {
             _ = context ?? throw new ArgumentNullException(nameof(context));
+
             return context.ShowHelp(context.Command);
         }
 
