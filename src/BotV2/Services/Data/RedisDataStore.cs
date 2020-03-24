@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using BotV2.Services.Data.Database;
-using BotV2.Services.Data.Resources;
 using BotV2.Services.Data.Resources.DelayedTaskQueues;
 using BotV2.Services.Data.Resources.HashTables;
 using BotV2.Services.Data.Resources.Lists;
@@ -37,9 +36,9 @@ namespace BotV2.Services.Data
             return new RedisObjectResource<T>(this.DbFactory, this.GetFullResourceKey(key), this.Serializer);
         }
 
-        public IUnlockedDelayedTaskQueueResource<T> GetDelayedTaskQueueResource<T>(string key)
+        public IDelayedTaskQueueResource<T> GetDelayedTaskQueueResource<T>(string key)
         {
-            return new RedisUnlockedDelayedTaskQueueResource<T>(this.DbFactory, this.GetFullResourceKey(key), this.Serializer);
+            return new RedisDelayedTaskQueueResource<T>(this.DbFactory, this.GetFullResourceKey(key), this.Serializer);
         }
 
         public IListResource<T> GetListResource<T>(string key)

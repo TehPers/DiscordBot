@@ -6,7 +6,6 @@ using BotV2.Extensions;
 using BotV2.Models;
 using BotV2.Services.Data.Database;
 using Newtonsoft.Json;
-using StackExchange.Redis;
 
 namespace BotV2.Services.Data.Resources.Sets
 {

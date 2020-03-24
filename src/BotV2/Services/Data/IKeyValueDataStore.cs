@@ -1,5 +1,4 @@
-﻿using BotV2.Services.Data.Resources;
-using BotV2.Services.Data.Resources.DelayedTaskQueues;
+﻿using BotV2.Services.Data.Resources.DelayedTaskQueues;
 using BotV2.Services.Data.Resources.HashTables;
 using BotV2.Services.Data.Resources.Lists;
 using BotV2.Services.Data.Resources.Objects;
@@ -12,7 +11,7 @@ namespace BotV2.Services.Data
     {
         IObjectResource<T> GetObjectResource<T>(string key);
 
-        IUnlockedDelayedTaskQueueResource<T> GetDelayedTaskQueueResource<T>(string key);
+        IDelayedTaskQueueResource<T> GetDelayedTaskQueueResource<T>(string key);
 
         IListResource<T> GetListResource<T>(string key);
 

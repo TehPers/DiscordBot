@@ -19,7 +19,7 @@ namespace BotV2.Services.Messages
             this._dataService = dataService ?? throw new ArgumentNullException(nameof(dataService));
         }
 
-        private IUnlockedDelayedTaskQueueResource<MessagePointer> GetRemoveQueue()
+        private IDelayedTaskQueueResource<MessagePointer> GetRemoveQueue()
         {
             var globalStore = this._dataService.GetGlobalStore();
             return globalStore.GetDelayedTaskQueueResource<MessagePointer>($"{TimedMessageService.RemoveQueueKey}");

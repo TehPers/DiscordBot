@@ -62,7 +62,7 @@ namespace BotV2.BotExtensions
             }
         }
 
-        private IUnlockedDelayedTaskQueueResource<MessagePointer> GetRemoveQueue()
+        private IDelayedTaskQueueResource<MessagePointer> GetRemoveQueue()
         {
             var globalStore = this._dataService.GetGlobalStore();
             return globalStore.GetDelayedTaskQueueResource<MessagePointer>($"{TimedMessageService.RemoveQueueKey}");

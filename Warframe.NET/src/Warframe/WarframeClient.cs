@@ -28,6 +28,17 @@ namespace Warframe
 
         public event EventHandler<HttpRequestEventArgs> MakingHttpRequest;
 
+        public WarframeClient(WarframePlatform platform, HttpClient client)
+            : this(WarframeClient.GetEndpointFromPlatform(platform), client)
+        {
+        }
+
+        public WarframeClient(Uri baseEndpoint, HttpClient client)
+            : this(baseEndpoint, (uri, cancellation) => client.GetAsync(uri, HttpCompletionOption.ResponseContentRead, cancellation))
+        {
+            _ = client ?? throw new ArgumentNullException(nameof(client));
+        }
+
         public WarframeClient(WarframePlatform platform, Func<Uri, CancellationToken, Task<HttpResponseMessage>> request)
             : this(WarframeClient.GetEndpointFromPlatform(platform), request)
         {

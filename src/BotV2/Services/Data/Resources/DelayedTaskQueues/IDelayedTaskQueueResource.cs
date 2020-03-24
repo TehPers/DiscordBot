@@ -11,5 +11,7 @@ namespace BotV2.Services.Data.Resources.DelayedTaskQueues
         new Task<Option<T>> TryPeekAsync();
 
         Task<bool> AddAsync(T value, DateTimeOffset availabilityTime);
+
+        new Task<Option<T>> TryPopAsync();
     }
 }

@@ -32,7 +32,7 @@ namespace Warframe
             this._serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
             this._requestUri = requestUri ?? throw new ArgumentNullException(nameof(requestUri));
             this._disposeTokenSource = new CancellationTokenSource();
-            
+
             // Cache result
             var cachePolicy = Policy
                 .CacheAsync<TModel>(cacheProvider, cacheTtl, context => context.OperationKey);
@@ -54,7 +54,7 @@ namespace Warframe
 
         private async Task<TModel> Request(Context context, CancellationToken cancellation)
         {
-            using (var response = await this._requestPolicy.ExecuteAsync(this.ExecuteRequest, new Context(context.OperationKey), cancellation).ConfigureAwait(false))
+            using (var response = await this._requestPolicy.ExecuteAsync((_, c) => this.ExecuteRequest(c), new Context(context.OperationKey), cancellation).ConfigureAwait(false))
             using (var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
             using (var contentReader = new StreamReader(contentStream))
             using (var jsonReader = new JsonTextReader(contentReader))
@@ -63,7 +63,7 @@ namespace Warframe
             }
         }
 
-        private Task<HttpResponseMessage> ExecuteRequest(Context context, CancellationToken cancellation)
+        private Task<HttpResponseMessage> ExecuteRequest(CancellationToken cancellation)
         {
             this.OnMakingRequest(new HttpRequestEventArgs(this._requestUri, HttpMethod.Get));
             return this._request(this._requestUri, cancellation);

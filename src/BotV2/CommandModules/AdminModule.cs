@@ -76,7 +76,12 @@ namespace BotV2.CommandModules
                     continue;
                 }
 
-                if (string.Equals(command.Trim(), "quit", StringComparison.OrdinalIgnoreCase))
+                if (command.StartsWith('#'))
+                {
+                    continue;
+                }
+
+                if (string.Equals(command, "quit", StringComparison.OrdinalIgnoreCase))
                 {
                     break;
                 }
