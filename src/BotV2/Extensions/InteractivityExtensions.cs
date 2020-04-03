@@ -20,6 +20,7 @@ namespace BotV2.Extensions
 
         private sealed class MessageWaiter : IDisposable
         {
+            private readonly DiscordClient _client;
             private readonly Func<DiscordMessage, bool> _predicate;
             private readonly TaskCompletionSource<DiscordMessage> _completionSource;
             private readonly SemaphoreSlim _messageCreatedSemaphore;
@@ -31,6 +32,7 @@ namespace BotV2.Extensions
 
             public MessageWaiter(DiscordClient client, Func<DiscordMessage, bool> predicate, CancellationToken cancellation = default)
             {
+                this._client = client ?? throw new ArgumentNullException(nameof(client));
                 this._predicate = predicate ?? throw new ArgumentNullException(nameof(predicate));
                 this._completionSource = new TaskCompletionSource<DiscordMessage>();
                 this._disposeSource = new CancellationTokenSource();
@@ -39,31 +41,45 @@ namespace BotV2.Extensions
                 this._disposed = false;
 
                 cancellation.ThrowIfCancellationRequested();
-                client.MessageCreated += this.ClientOnMessageCreated;
+                this._client.MessageCreated += this.ClientOnMessageCreated;
             }
 
             private async Task ClientOnMessageCreated(MessageCreateEventArgs args)
             {
+                // Early exit if task is already completed
                 if (this.Task.IsCompleted || this.Task.IsCanceled || this.Task.IsFaulted)
                 {
+                    this._client.MessageCreated -= this.ClientOnMessageCreated;
                     return;
                 }
 
-                await this._messageCreatedSemaphore.WaitAsync(this._linkedSource.Token).ConfigureAwait(false);
+                // Wait for next section to be open
                 try
                 {
-                    if (this.Task.IsCompleted || this.Task.IsCanceled || this.Task.IsFaulted)
-                    {
-                        return;
-                    }
-
-                    if (this._predicate(args.Message))
-                    {
-                        this._completionSource.SetResult(args.Message);
-                    }
+                    await this._messageCreatedSemaphore.WaitAsync(this._linkedSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
+                    this._client.MessageCreated -= this.ClientOnMessageCreated;
+                    this._completionSource.SetCanceled();
+                    return;
+                }
+
+                try
+                {
+                    // Check again to make sure task wasn't completed before entering this block
+                    if (this.Task.IsCompleted || this.Task.IsCanceled || this.Task.IsFaulted)
+                    {
+                        this._client.MessageCreated -= this.ClientOnMessageCreated;
+                        return;
+                    }
+
+                    // Check if message matches predicate
+                    if (this._predicate(args.Message))
+                    {
+                        this._client.MessageCreated -= this.ClientOnMessageCreated;
+                        this._completionSource.SetResult(args.Message);
+                    }
                 }
                 finally
                 {
@@ -76,6 +92,7 @@ namespace BotV2.Extensions
 
             public void Dispose()
             {
+                this._client.MessageCreated -= this.ClientOnMessageCreated;
                 this._disposed = true;
                 this._disposeSource.Dispose();
                 this._linkedSource.Dispose();
