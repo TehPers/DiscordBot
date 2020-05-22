@@ -157,6 +157,22 @@ namespace BotV2.Services
             }
         }
 
+        public string? GetItemThumbnail(IEnumerable<StackedItem> items)
+        {
+            if (this._config.CurrentValue.RewardThumbnails is { } thumbnails)
+            {
+                foreach (var item in items)
+                {
+                    if (thumbnails.FirstOrDefault(kv => item.Type.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)) is { Value: string thumbnail } && !string.IsNullOrWhiteSpace(thumbnail))
+                    {
+                        return thumbnail;
+                    }
+                }
+            }
+
+            return null;
+        }
+
         private IEnumerable<StackedItem> ToStackedItems(MissionReward reward)
         {
             var items = reward.Items.Select(item => new StackedItem(item, 1));

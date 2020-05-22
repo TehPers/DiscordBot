@@ -377,16 +377,9 @@ namespace BotV2.BotExtensions
                 .WithFooter(durationStr);
 
             // Thumbnail
-            if (this._config.CurrentValue.RewardIcons is { } rewardThumbnails)
+            if (this._infoService.GetItemThumbnail(importantRewards) is { } thumbnail)
             {
-                foreach (var reward in importantRewards)
-                {
-                    if (rewardThumbnails.FirstOrDefault(kv => string.Equals(kv.Key, reward.Type, StringComparison.OrdinalIgnoreCase)) is {Value: string thumbnail} && !string.IsNullOrWhiteSpace(thumbnail))
-                    {
-                        embed = embed.WithThumbnailUrl(thumbnail);
-                        break;
-                    }
-                }
+                embed = embed.WithThumbnailUrl(thumbnail);
             }
 
             return (content, embed);
