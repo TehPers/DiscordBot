@@ -139,7 +139,7 @@ namespace BotV2.Services
                 }
 
                 sb.Append(" ");
-                if (icons.FirstOrDefault(kv => kv.Key.Contains(item.Type, StringComparison.OrdinalIgnoreCase)) is { Value: string icon })
+                if (icons.FirstOrDefault(kv => item.Type.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)) is { Value: string icon })
                 {
                     sb.Append(icon);
                     if (!isCurrency)
