@@ -11,6 +11,7 @@ using DSharpPlus.CommandsNext.Converters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace BotV2.Extensions
 {
@@ -22,10 +23,11 @@ namespace BotV2.Extensions
             _ = services ?? throw new ArgumentNullException(nameof(services));
 
             services.TryAddSingleton(serviceProvider => new DiscordClient(serviceProvider.GetRequiredService<DiscordConfiguration>()));
-            services.TryAddSingleton(_ => new DiscordConfiguration
+            services.TryAddSingleton(serviceProvider => new DiscordConfiguration
             {
                 TokenType = TokenType.Bot,
-                LogLevel = LogLevel.Debug,
+                LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>(),
+                MinimumLogLevel = LogLevel.Debug,
                 Token = config["Token"],
                 AutoReconnect = true,
             });

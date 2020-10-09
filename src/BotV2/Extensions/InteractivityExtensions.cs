@@ -44,7 +44,7 @@ namespace BotV2.Extensions
                 this._client.MessageCreated += this.ClientOnMessageCreated;
             }
 
-            private async Task ClientOnMessageCreated(MessageCreateEventArgs args)
+            private async Task ClientOnMessageCreated(DiscordClient sender, MessageCreateEventArgs args)
             {
                 // Early exit if task is already completed
                 if (this.Task.IsCompleted || this.Task.IsCanceled || this.Task.IsFaulted)

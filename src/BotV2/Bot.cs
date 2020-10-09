@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.EventArgs;
 using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace BotV2
@@ -25,32 +26,16 @@ namespace BotV2
             this._running = 0;
 
             // Logging
-            client.ClientErrored += args => this.LogEventAsync("Client", LogLevel.Error, $"An error occurred during {args.EventName}", args.Exception);
-            client.SocketErrored += args => this.LogEventAsync("Socket", LogLevel.Error, "Socket connection errored", args.Exception);
-            client.GuildUnavailable += args => this.LogEventAsync("Discord", LogLevel.Warning, $"Guild became {(args.Unavailable ? "unavailable" : "available")}: {args.Guild.Name} ({args.Guild.Id})");
-            client.UnknownEvent += args => this.LogEventAsync("Unknown", LogLevel.Information, $"An unknown event occurred: [{args.EventName}] {args.Json}");
-            client.DebugLogger.LogMessageReceived += this.DebugLoggerOnLogMessageReceived;
+            client.ClientErrored += (sender, args) => this.LogEventAsync("Client", LogLevel.Error, $"An error occurred during {args.EventName}", args.Exception);
+            client.SocketErrored += (sender, args) => this.LogEventAsync("Socket", LogLevel.Error, "Socket connection errored", args.Exception);
+            client.GuildUnavailable += (sender, args) => this.LogEventAsync("Discord", LogLevel.Warning, $"Guild became {(args.Unavailable ? "unavailable" : "available")}: {args.Guild.Name} ({args.Guild.Id})");
+            client.UnknownEvent += (sender, args) => this.LogEventAsync("Unknown", LogLevel.Information, $"An unknown event occurred: [{args.EventName}] {args.Json}");
 
             // Extensions
             foreach (var extension in extensions)
             {
                 client.AddExtension(extension);
             }
-        }
-
-        private void DebugLoggerOnLogMessageReceived(object? sender, DebugLogMessageEventArgs e)
-        {
-            var level = e.Level switch
-            {
-                DSharpPlus.LogLevel.Debug => LogLevel.Trace,
-                DSharpPlus.LogLevel.Info => LogLevel.Information,
-                DSharpPlus.LogLevel.Warning => LogLevel.Warning,
-                DSharpPlus.LogLevel.Error => LogLevel.Error,
-                DSharpPlus.LogLevel.Critical => LogLevel.Critical,
-                _ => throw new ArgumentOutOfRangeException()
-            };
-
-            this.LogEvent(e.Application, level, $"[{e.Timestamp:O}] {e.Message}", e.Exception);
         }
 
         public async Task Start()

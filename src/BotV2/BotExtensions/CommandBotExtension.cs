@@ -51,13 +51,13 @@ namespace BotV2.BotExtensions
             client.MessageCreated += this.OnMessageCreated;
         }
 
-        private Task OnCommandsNextOnCommandExecuted(CommandExecutionEventArgs args)
+        private Task OnCommandsNextOnCommandExecuted(CommandsNextExtension sender, CommandExecutionEventArgs args)
         {
             this._logger.LogTrace($"{args.Context.Member?.Username ?? "??"} ({args.Context.Member?.Id.ToString() ?? "??"}) executed {args.Command.QualifiedName} successfully");
             return Task.CompletedTask;
         }
 
-        private Task OnCommandsNextOnCommandErrored(CommandErrorEventArgs args)
+        private Task OnCommandsNextOnCommandErrored(CommandsNextExtension sender, CommandErrorEventArgs args)
         {
             switch (args.Context)
             {
@@ -73,7 +73,7 @@ namespace BotV2.BotExtensions
             }
         }
 
-        private async Task OnMessageCreated(MessageCreateEventArgs e)
+        private async Task OnMessageCreated(DiscordClient sender, MessageCreateEventArgs e)
         {
             if (e.Author.IsBot || e.Channel == null)
             {

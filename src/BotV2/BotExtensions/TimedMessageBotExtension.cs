@@ -26,7 +26,7 @@ namespace BotV2.BotExtensions
         {
             base.Setup(client);
 
-            client.Ready += args =>
+            client.Ready += (sender, args) =>
             {
                 this.RunParallel(this.RemoveExpired);
                 return Task.CompletedTask;

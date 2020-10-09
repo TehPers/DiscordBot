@@ -61,7 +61,7 @@ namespace BotV2.BotExtensions
         {
             base.Setup(client);
 
-            client.Ready += args =>
+            client.Ready += (c, args) =>
             {
                 this.RunParallel(this.Monitor);
                 return Task.CompletedTask;
@@ -379,7 +379,7 @@ namespace BotV2.BotExtensions
             // Thumbnail
             if (this._infoService.GetItemThumbnail(importantRewards) is { } thumbnail)
             {
-                embed = embed.WithThumbnailUrl(thumbnail);
+                embed = embed.WithThumbnail(thumbnail);
             }
 
             return (content, embed);
@@ -416,7 +416,7 @@ namespace BotV2.BotExtensions
             // Thumbnail
             if (this._config.CurrentValue.FactionThumbnails is {} factionThumbnails && factionThumbnails.FirstOrDefault(kv => string.Equals(kv.Key, invasion.AttackingFaction, StringComparison.OrdinalIgnoreCase)) is {Value: string thumbnail} && !string.IsNullOrWhiteSpace(thumbnail))
             {
-                embed = embed.WithThumbnailUrl(thumbnail);
+                embed = embed.WithThumbnail(thumbnail);
             }
 
             return (content, embed);
@@ -438,7 +438,7 @@ namespace BotV2.BotExtensions
             var thumbnail = cetusStatus.IsDay ? this._config.CurrentValue.DayThumbnail : this._config.CurrentValue.NightThumbnail;
             if (!string.IsNullOrWhiteSpace(thumbnail))
             {
-                embed = embed.WithThumbnailUrl(thumbnail);
+                embed = embed.WithThumbnail(thumbnail);
             }
 
             return (content, embed);

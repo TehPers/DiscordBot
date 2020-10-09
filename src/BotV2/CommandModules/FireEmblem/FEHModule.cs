@@ -126,7 +126,7 @@ namespace BotV2.CommandModules.FireEmblem
 
                     if (string.Equals(key, "Image", StringComparison.OrdinalIgnoreCase))
                     {
-                        builder.WithThumbnailUrl(value);
+                        builder.WithThumbnail(value);
                     }
                     else if (string.Equals(key, "Color", StringComparison.OrdinalIgnoreCase))
                     {
