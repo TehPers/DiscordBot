@@ -1,9 +1,10 @@
 version: "3.3"
 services:
   redis:
-    image: redis
-    command: ["redis-server", "--appendonly", "yes"]
+    image: redis:latest
+    command: ["redis-server", "/config/redis.conf"]
     volumes:
+      - "./config/redis:/config:ro"
       - "./.data/redis:/data"
     ports:
       - "6379:6379"

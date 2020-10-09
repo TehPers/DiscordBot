@@ -1,9 +1,10 @@
 version: "3.3"
 services:
   redis:
-    image: redis
-    command: ["redis-server", "--appendonly", "yes"]
+    image: redis:latest
+    command: ["redis-server", "/config/redis.conf"]
     volumes:
+      - "./config/redis:/config:ro"
       - "/srv/docker/redis:/data"
     networks:
       - dbnet
