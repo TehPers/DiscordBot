@@ -373,7 +373,7 @@ namespace BotV2.BotExtensions
                 .WithTitle($"Alert - {alert.Mission.Node} - {durationStr}")
                 .WithDescription(description.ToString())
                 .WithColor(new DiscordColor(this._config.CurrentValue.ActiveColor ?? "#000000"))
-                .WithTimestamp(alert.ActivatedAt)
+                .WithTimestamp(alert.ExpiresAt)
                 .WithFooter(durationStr);
 
             // Thumbnail
@@ -432,7 +432,7 @@ namespace BotV2.BotExtensions
                 .WithTitle($"{(cetusStatus.IsDay ? this._config.CurrentValue.DayIcon : this._config.CurrentValue.NightIcon)} Cetus")
                 .WithDescription($"{(cetusStatus.IsDay ? "Day" : "Night")} time remaining: {this.Format(cetusStatus.ExpiresAt - DateTimeOffset.UtcNow)}")
                 .WithColor(new DiscordColor(color ?? "#000000"))
-                .WithTimestamp(cetusStatus.ActivatedAt);
+                .WithTimestamp(cetusStatus.ExpiresAt);
 
             // Thumbnail
             var thumbnail = cetusStatus.IsDay ? this._config.CurrentValue.DayThumbnail : this._config.CurrentValue.NightThumbnail;
