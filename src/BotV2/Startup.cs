@@ -66,7 +66,7 @@ namespace BotV2
             services.AddSingleton(configuration);
             services.AddLogging(builder =>
             {
-                builder.AddConsole(options => options.TimestampFormat = "[o]");
+                builder.AddConsole();
                 // builder.AddDatabase();
                 builder.AddConfiguration(configuration.GetSection("Logging"));
             });

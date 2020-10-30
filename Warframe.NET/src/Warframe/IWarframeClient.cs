@@ -14,6 +14,12 @@ namespace Warframe
 
         Task<IEnumerable<Invasion>> GetInvasionsAsync(CancellationToken cancellation = default);
 
+        Task<EarthCycle> GetEarthStatus(CancellationToken cancellation = default);
+
         Task<CetusCycle> GetCetusStatus(CancellationToken cancellation = default);
+
+        Task<VallisCycle> GetVallisStatus(CancellationToken cancellation = default);
+
+        Task<CambionCycle> GetCambionStatus(CancellationToken cancellation = default);
     }
 }

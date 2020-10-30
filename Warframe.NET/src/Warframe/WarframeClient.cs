@@ -21,7 +21,10 @@ namespace Warframe
 
         private readonly ApiProvider<List<Alert>> _alertsProvider;
         private readonly ApiProvider<List<Invasion>> _invasionsProvider;
+        private readonly ApiProvider<EarthCycle> _earthStatusProvider;
         private readonly ApiProvider<CetusCycle> _cetusStatusProvider;
+        private readonly ApiProvider<VallisCycle> _vallisStatusProvider;
+        private readonly ApiProvider<CambionCycle> _cambionStatusProvider;
 
         private readonly IMemoryCache _cache;
         private readonly CancellationTokenSource _disposeSource;
@@ -70,7 +73,10 @@ namespace Warframe
 
             this._alertsProvider = new ApiProvider<List<Alert>>(request, requestPolicy, cacheProvider, TimeSpan.FromMinutes(5), serializer, new Uri(baseEndpoint, "alerts"));
             this._invasionsProvider = new ApiProvider<List<Invasion>>(request, requestPolicy, cacheProvider, TimeSpan.FromMinutes(5), serializer, new Uri(baseEndpoint, "invasions"));
-            this._cetusStatusProvider = new ApiProvider<CetusCycle>(request, requestPolicy, cacheProvider, TimeSpan.FromSeconds(15), serializer, new Uri(baseEndpoint, "cetusCycle"));
+            this._earthStatusProvider = new ApiProvider<EarthCycle>(request, requestPolicy, cacheProvider, TimeSpan.FromSeconds(30), serializer, new Uri(baseEndpoint, "earthCycle"));
+            this._cetusStatusProvider = new ApiProvider<CetusCycle>(request, requestPolicy, cacheProvider, TimeSpan.FromSeconds(30), serializer, new Uri(baseEndpoint, "cetusCycle"));
+            this._vallisStatusProvider = new ApiProvider<VallisCycle>(request, requestPolicy, cacheProvider, TimeSpan.FromSeconds(30), serializer, new Uri(baseEndpoint, "vallisCycle"));
+            this._cambionStatusProvider = new ApiProvider<CambionCycle>(request, requestPolicy, cacheProvider, TimeSpan.FromSeconds(30), serializer, new Uri(baseEndpoint, "cambionCycle"));
 
             this._alertsProvider.MakingHttpRequest += (_, e) => this.OnMakingHttpRequest(e);
             this._invasionsProvider.MakingHttpRequest += (_, e) => this.OnMakingHttpRequest(e);
@@ -79,26 +85,38 @@ namespace Warframe
 
         public async Task<IEnumerable<Alert>> GetAlertsAsync(CancellationToken cancellation = default)
         {
-            using (var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(this._disposeSource.Token, cancellation))
-            {
-                return await this._alertsProvider.GetResult(linkedSource.Token).ConfigureAwait(false);
-            }
+            using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(this._disposeSource.Token, cancellation);
+            return await this._alertsProvider.GetResult(linkedSource.Token).ConfigureAwait(false);
         }
 
         public async Task<IEnumerable<Invasion>> GetInvasionsAsync(CancellationToken cancellation = default)
         {
-            using (var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(this._disposeSource.Token, cancellation))
-            {
-                return await this._invasionsProvider.GetResult(linkedSource.Token).ConfigureAwait(false);
-            }
+            using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(this._disposeSource.Token, cancellation);
+            return await this._invasionsProvider.GetResult(linkedSource.Token).ConfigureAwait(false);
+        }
+
+        public async Task<EarthCycle> GetEarthStatus(CancellationToken cancellation = default)
+        {
+            using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(this._disposeSource.Token, cancellation);
+            return await this._earthStatusProvider.GetResult(linkedSource.Token).ConfigureAwait(false);
         }
 
         public async Task<CetusCycle> GetCetusStatus(CancellationToken cancellation = default)
         {
-            using (var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(this._disposeSource.Token, cancellation))
-            {
-                return await this._cetusStatusProvider.GetResult(linkedSource.Token).ConfigureAwait(false);
-            }
+            using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(this._disposeSource.Token, cancellation);
+            return await this._cetusStatusProvider.GetResult(linkedSource.Token).ConfigureAwait(false);
+        }
+
+        public async Task<VallisCycle> GetVallisStatus(CancellationToken cancellation = default)
+        {
+            using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(this._disposeSource.Token, cancellation);
+            return await this._vallisStatusProvider.GetResult(linkedSource.Token).ConfigureAwait(false);
+        }
+
+        public async Task<CambionCycle> GetCambionStatus(CancellationToken cancellation = default)
+        {
+            using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(this._disposeSource.Token, cancellation);
+            return await this._cambionStatusProvider.GetResult(linkedSource.Token).ConfigureAwait(false);
         }
 
         public void Dispose()
@@ -107,7 +125,10 @@ namespace Warframe
 
             this._alertsProvider.Dispose();
             this._invasionsProvider.Dispose();
+            this._earthStatusProvider.Dispose();
             this._cetusStatusProvider.Dispose();
+            this._vallisStatusProvider.Dispose();
+            this._cambionStatusProvider.Dispose();
 
             this._cache.Dispose();
         }
@@ -119,19 +140,14 @@ namespace Warframe
 
         private static Uri GetEndpointFromPlatform(WarframePlatform platform)
         {
-            switch (platform)
+            return platform switch
             {
-                case WarframePlatform.Pc:
-                    return WarframeClient.PcEndpoint;
-                case WarframePlatform.Ps4:
-                    return WarframeClient.Ps4Endpoint;
-                case WarframePlatform.Xbox1:
-                    return WarframeClient.Xbox1Endpoint;
-                case WarframePlatform.Switch:
-                    return WarframeClient.SwitchEndpoint;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(platform), platform, null);
-            }
+                WarframePlatform.Pc => WarframeClient.PcEndpoint,
+                WarframePlatform.Ps4 => WarframeClient.Ps4Endpoint,
+                WarframePlatform.Xbox1 => WarframeClient.Xbox1Endpoint,
+                WarframePlatform.Switch => WarframeClient.SwitchEndpoint,
+                _ => throw new ArgumentOutOfRangeException(nameof(platform), platform, null)
+            };
         }
     }
 }

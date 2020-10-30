@@ -1,15 +1,11 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
 using Polly;
-using Polly.Bulkhead;
 using Polly.Caching;
-using Polly.Caching.Memory;
 
 namespace Warframe
 {
@@ -46,21 +42,17 @@ namespace Warframe
 
         public async Task<TModel> GetResult(CancellationToken cancellation)
         {
-            using (var source = CancellationTokenSource.CreateLinkedTokenSource(this._disposeTokenSource.Token, cancellation))
-            {
-                return await this._cachePolicy.ExecuteAsync(this.Request, new Context(this._requestUri.AbsoluteUri), source.Token).ConfigureAwait(false);
-            }
+            using var source = CancellationTokenSource.CreateLinkedTokenSource(this._disposeTokenSource.Token, cancellation);
+            return await this._cachePolicy.ExecuteAsync(this.Request, new Context(this._requestUri.AbsoluteUri), source.Token).ConfigureAwait(false);
         }
 
         private async Task<TModel> Request(Context context, CancellationToken cancellation)
         {
-            using (var response = await this._requestPolicy.ExecuteAsync((_, c) => this.ExecuteRequest(c), new Context(context.OperationKey), cancellation).ConfigureAwait(false))
-            using (var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-            using (var contentReader = new StreamReader(contentStream))
-            using (var jsonReader = new JsonTextReader(contentReader))
-            {
-                return this._serializer.Deserialize<TModel>(jsonReader);
-            }
+            using var response = await this._requestPolicy.ExecuteAsync((_, c) => this.ExecuteRequest(c), new Context(context.OperationKey), cancellation).ConfigureAwait(false);
+            await using var contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            using var contentReader = new StreamReader(contentStream);
+            using var jsonReader = new JsonTextReader(contentReader);
+            return this._serializer.Deserialize<TModel>(jsonReader);
         }
 
         private Task<HttpResponseMessage> ExecuteRequest(CancellationToken cancellation)

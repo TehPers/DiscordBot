@@ -67,7 +67,7 @@ namespace BotV2.Extensions
                 // If an error occurs with pinning the message, tokenSource is automatically disposed so the task will not continue to run
                 using var tokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 var cancellation = tokenSource.Token;
-                _ = Task.Run(async () =>
+                var deletePinMessage = Task.Run(async () =>
                 {
                     var notification = await client.WaitForMessageAsync(msg => msg.Author == client.CurrentUser && msg.Content == string.Empty, cancellation).ConfigureAwait(false);
                     try
@@ -84,6 +84,7 @@ namespace BotV2.Extensions
 
                 // Pin the message
                 await message.PinAsync().ConfigureAwait(false);
+                await Task.WhenAny(deletePinMessage, Task.Delay(TimeSpan.FromSeconds(5), cancellation)).ConfigureAwait(false);
 
                 return true;
             }
@@ -92,6 +93,14 @@ namespace BotV2.Extensions
                 return false;
             }
             catch (NotFoundException)
+            {
+                return false;
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+            catch (BadRequestException)
             {
                 return false;
             }

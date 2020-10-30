@@ -3,11 +3,11 @@ using Newtonsoft.Json;
 
 namespace Warframe.World.Models
 {
-    public class CetusCycle
+    public class EarthCycle
     {
         [JsonProperty]
         public string Id { get; private set; }
-        
+
         [JsonProperty("activation")]
         public DateTimeOffset ActivatedAt { get; private set; }
 
@@ -19,9 +19,6 @@ namespace Warframe.World.Models
 
         [JsonProperty]
         public string State { get; private set; }
-
-        [JsonProperty]
-        public string ShortString { get; private set; }
 
         [JsonProperty]
         public string TimeLeft { get; private set; }

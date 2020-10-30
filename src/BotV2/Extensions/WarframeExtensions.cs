@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Net.Http;
+using System.Text;
 using BotV2.BotExtensions;
 using BotV2.CommandModules.Warframe;
 using BotV2.Models.WarframeInfo;
-using BotV2.Services;
+using BotV2.Services.WarframeInfo;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -25,7 +26,7 @@ namespace BotV2.Extensions
             services.TryAddBotExtension<WarframeInfoBotExtension>();
             services.AddHttpClient();
             services.Configure<WarframeInfoConfig>(config.GetSection("Warframe"));
-            services.TryAddSingleton(serviceProvider =>
+            services.TryAddSingleton<IWarframeClient>(serviceProvider =>
             {
                 var clientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
                 var logger = serviceProvider.GetRequiredService<ILogger<WarframeClient>>();
@@ -37,7 +38,38 @@ namespace BotV2.Extensions
                 });
             });
 
+            // Cycles
+            services.TryAddEnumerable(new[]
+            {
+                ServiceDescriptor.Singleton<IWarframeCycle, WarframeEarthCycle>(),
+                ServiceDescriptor.Singleton<IWarframeCycle, WarframeCetusCycle>(),
+                ServiceDescriptor.Singleton<IWarframeCycle, WarframeVallisCycle>(),
+                ServiceDescriptor.Singleton<IWarframeCycle, WarframeCambionCycle>()
+            });
+
             return services;
+        }
+
+        public static string FormatWarframeTime(this TimeSpan interval)
+        {
+            var result = new StringBuilder();
+
+            if (interval.Days > 0)
+            {
+                result.Append($"{interval.Days}d ");
+            }
+
+            if (interval.Hours > 0)
+            {
+                result.Append($"{interval.Hours}h ");
+            }
+
+            if (interval.Minutes > 0 || interval.TotalMinutes < 1)
+            {
+                result.Append($"{Math.Ceiling(interval.TotalMinutes % 60)}m");
+            }
+
+            return result.ToString();
         }
     }
 }

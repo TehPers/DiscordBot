@@ -10,7 +10,7 @@ using DSharpPlus.Entities;
 using Microsoft.Extensions.Options;
 using Warframe.World.Models;
 
-namespace BotV2.Services
+namespace BotV2.Services.WarframeInfo
 {
     public class WarframeInfoService
     {
@@ -26,10 +26,10 @@ namespace BotV2.Services
             this._config = config ?? throw new ArgumentNullException(nameof(config));
         }
 
-        public async Task SetSubscribed(ulong channelId, InfoType infoType, bool subscribed)
+        public async Task SetSubscribed(ulong channelId, string subscriberKey, bool subscribed)
         {
             var globalStore = this._dataService.GetGlobalStore();
-            var subscribers = globalStore.GetSetResource<ulong>(this.GetSubscriptionKey(infoType));
+            var subscribers = globalStore.GetSetResource<ulong>(this.GetSubscriptionKey(subscriberKey));
 
             if (subscribed)
             {
@@ -41,18 +41,18 @@ namespace BotV2.Services
             }
         }
 
-        public async Task<bool> GetSubscribed(ulong channelId, InfoType infoType)
+        public async Task<bool> GetSubscribed(ulong channelId, string subscriberKey)
         {
             var globalStore = this._dataService.GetGlobalStore();
-            var subscribers = globalStore.GetSetResource<ulong>(this.GetSubscriptionKey(infoType));
+            var subscribers = globalStore.GetSetResource<ulong>(this.GetSubscriptionKey(subscriberKey));
 
             return await subscribers.ContainsAsync(channelId).ConfigureAwait(false);
         }
 
-        public async Task<bool> ToggleSubscription(ulong channelId, InfoType infoType)
+        public async Task<bool> ToggleSubscription(ulong channelId, string subscriberKey)
         {
             var globalStore = this._dataService.GetGlobalStore();
-            var subscribers = globalStore.GetSetResource<ulong>(this.GetSubscriptionKey(infoType));
+            var subscribers = globalStore.GetSetResource<ulong>(this.GetSubscriptionKey(subscriberKey));
 
             if (await subscribers.RemoveAsync(channelId).ConfigureAwait(false))
             {
@@ -62,10 +62,10 @@ namespace BotV2.Services
             return await subscribers.AddAsync(channelId).ConfigureAwait(false);
         }
 
-        public IAsyncEnumerable<ulong> GetSubscribers(InfoType infoType)
+        public IAsyncEnumerable<ulong> GetSubscribers(string subscriberKey)
         {
             var globalStore = this._dataService.GetGlobalStore();
-            var subscribers = globalStore.GetSetResource<ulong>(this.GetSubscriptionKey(infoType));
+            var subscribers = globalStore.GetSetResource<ulong>(this.GetSubscriptionKey(subscriberKey));
 
             return subscribers;
         }
@@ -94,19 +94,14 @@ namespace BotV2.Services
             }
         }
 
-        public IEnumerable<DiscordRole> GetRolesForCycle(DiscordGuild guild, CetusCycle cycle)
+        public IEnumerable<DiscordRole> GetRolesForCycle(DiscordGuild guild, string region, string state)
         {
-            _ = cycle ?? throw new ArgumentNullException(nameof(cycle));
+            _ = state ?? throw new ArgumentNullException(nameof(state));
+            _ = region ?? throw new ArgumentNullException(nameof(region));
             _ = guild ?? throw new ArgumentNullException(nameof(guild));
 
-            var name = cycle.IsDay ? "day" : "night";
-            foreach (var role in guild.Roles.Values)
-            {
-                if (string.Equals(role.Name, $"wfinfo: {name}"))
-                {
-                    yield return role;
-                }
-            }
+            var name = $"wfinfo: {region}/{state}";
+            return guild.Roles.Values.Where(role => string.Equals(role.Name, name, StringComparison.OrdinalIgnoreCase));
         }
 
         public IEnumerable<StackedItem> GetImportantRewards(MissionReward reward)
@@ -180,47 +175,12 @@ namespace BotV2.Services
             return reward.Credits > 0 ? items.Prepend(new StackedItem("credits", reward.Credits)) : items;
         }
 
-        public IEnumerable<string> GetImportantRewards()
+        private string GetSubscriptionKey(string subKey)
         {
-            return this._config.CurrentValue.ImportantRewards ?? new List<string>();
+            return $"{WarframeInfoService.SubscriptionsKey}:{subKey}";
         }
 
-        public IReadOnlyDictionary<string, string> GetRewardIcons()
-        {
-            return this._config.CurrentValue.RewardIcons ?? new Dictionary<string, string>();
-        }
-
-        public IEnumerable<string> GetCurrencies()
-        {
-            return this._config.CurrentValue.Currencies ?? new List<string>();
-        }
-
-        public string GetDayIcon()
-        {
-            return this._config.CurrentValue.DayIcon ?? string.Empty;
-        }
-
-        public string GetNightIcon()
-        {
-            return this._config.CurrentValue.NightIcon ?? string.Empty;
-        }
-
-        private string GetSubscriptionKey(InfoType infoType)
-        {
-            return $"{WarframeInfoService.SubscriptionsKey}:{this.GetSubKey(infoType)}";
-        }
-
-        private string GetSubKey(InfoType infoType)
-        {
-            return infoType switch
-            {
-                InfoType.Alerts => "alerts",
-                InfoType.Invasions => "invasions",
-                InfoType.Cetus => "cetus",
-                _ => throw new ArgumentOutOfRangeException(nameof(infoType)),
-            };
-        }
-
+        [Obsolete]
         public enum InfoType
         {
             Alerts,

@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using DSharpPlus;
-using DSharpPlus.EventArgs;
 using Microsoft.Extensions.Logging;
-using StackExchange.Redis;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace BotV2
