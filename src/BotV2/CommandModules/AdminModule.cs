@@ -207,7 +207,7 @@ namespace BotV2.CommandModules
         [Description("Manipulate messages.")]
         public sealed class MessageGroup : BaseCommandModule
         {
-            private static readonly Regex UrlPattern = new Regex(@"^https://discordapp\.com/channels/(?<guildId>\d+)/(?<channelId>\d+)/(?<messageId>\d+)$", RegexOptions.IgnoreCase);
+            private static readonly Regex UrlPattern = new Regex(@"^https://discord\.com/channels/(?<guildId>\d+)/(?<channelId>\d+)/(?<messageId>\d+)$", RegexOptions.IgnoreCase);
 
             [Command("echo")]
             [Description("Repeats a message.")]
