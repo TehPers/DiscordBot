@@ -33,6 +33,7 @@ namespace BotV2.BotExtensions
         private const string AlertExpiryKey = WarframeInfoBotExtension.AlertsKey + ":expire";
         private const string ActiveInvasionsKey = WarframeInfoBotExtension.InvasionsKey + ":active";
 
+        private const string CycleBaseKey = WarframeInfoBotExtension.BaseKey + ":cycles";
         private const string CycleMessagesKey = ":messages";
         private const string CycleStatusKey = ":last_status";
 
@@ -231,8 +232,8 @@ namespace BotV2.BotExtensions
             var globalStore = this._dataService.GetGlobalStore();
             var tasks = this._cycles.Select(async cycle =>
             {
-                var lastStatus = globalStore.GetObjectResource<string>($"{cycle.Id}{WarframeInfoBotExtension.CycleStatusKey}");
-                var messages = globalStore.GetSetResource<MessagePointer>($"{cycle.Id}{WarframeInfoBotExtension.CycleMessagesKey}");
+                var lastStatus = globalStore.GetObjectResource<string>($"{WarframeInfoBotExtension.CycleBaseKey}:{cycle.Id}{WarframeInfoBotExtension.CycleStatusKey}");
+                var messages = globalStore.GetSetResource<MessagePointer>($"{WarframeInfoBotExtension.CycleBaseKey}:{cycle.Id}{WarframeInfoBotExtension.CycleMessagesKey}");
                 var status = await cycle.GetStatus(cancellation).ConfigureAwait(false);
 
                 if ((await lastStatus.Set(status.Id).ConfigureAwait(false)).TryGetValue(out var lastStatusValue) && lastStatusValue == status.Id)
@@ -281,7 +282,7 @@ namespace BotV2.BotExtensions
             var globalStore = this._dataService.GetGlobalStore();
             var tasks = this._cycles.Select(async cycle =>
             {
-                var messages = globalStore.GetSetResource<MessagePointer>($"{cycle.Id}{WarframeInfoBotExtension.CycleMessagesKey}");
+                var messages = globalStore.GetSetResource<MessagePointer>($"{ WarframeInfoBotExtension.CycleBaseKey}:{cycle.Id}{WarframeInfoBotExtension.CycleMessagesKey}");
                 var status = await cycle.GetStatus(cancellation).ConfigureAwait(false);
 
                 await foreach (var messagePointer in messages)
