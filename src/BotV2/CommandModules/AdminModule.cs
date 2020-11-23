@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Net.Mime;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotV2.Extensions;
@@ -365,6 +367,35 @@ namespace BotV2.CommandModules
                         ResultType.Error => $"Error: {result}",
                         _ => $"<{result?.ToString() ?? string.Empty}> ({result?.Type.ToString() ?? "<null result>"})"
                     };
+                }
+            }
+        }
+
+        [Group("guild")]
+        [Description("Performs guild-related actions.")]
+        public sealed class GuildGroup : BaseCommandModule
+        {
+            [Command("roles")]
+            [Description("Lists the roles in the guild.")]
+            [RequireBotPermissions(Permissions.SendMessages | Permissions.EmbedLinks)]
+            public async Task Execute(CommandContext context)
+            {
+                try
+                {
+                    var embed = new DiscordEmbedBuilder()
+                        .WithTitle($"Roles in {context.Guild.Name}")
+                        .WithTimestamp(DateTimeOffset.Now);
+
+                    foreach (var (id, role) in context.Guild.Roles)
+                    {
+                        embed.AddField(role.Name, $"{role.Mention}\nMentionable: {role.IsMentionable}", true);
+                    }
+
+                    await context.RespondAsync(embed: embed).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    await context.RespondAsync($"An error occurred:\n```\n{ex.Message}\n```").ConfigureAwait(false);
                 }
             }
         }
