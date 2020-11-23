@@ -147,7 +147,6 @@ namespace BotV2.BotExtensions
                     var channel = await this.Client.GetChannelAsync(subscriber).ConfigureAwait(false);
                     var (content, embed) = this.GetAlertMessage(channel, alert);
                     var msg = await channel.SendMessageAsync(content, embed: embed).ConfigureAwait(false);
-                    await msg.TryPinSilentlyAsync(this.Client, true).ConfigureAwait(false);
                     var endTime = alert.ExpiresAt;
 
                     try
@@ -205,7 +204,6 @@ namespace BotV2.BotExtensions
                     var channel = await this.Client.GetChannelAsync(subscriber).ConfigureAwait(false);
                     var (content, embed) = this.GetInvasionEmbed(channel, invasion);
                     var msg = await channel.SendMessageAsync(content, embed: embed).ConfigureAwait(false);
-                    await msg.TryPinSilentlyAsync(this.Client, true).ConfigureAwait(false);
                     var removeAfter = invasion.ActivatedAt + this._invasionTtl;
 
                     try
@@ -262,7 +260,6 @@ namespace BotV2.BotExtensions
                     var channel = await this.Client.GetChannelAsync(subscriber).ConfigureAwait(false);
                     var (content, embed) = status.GetMessage(channel);
                     var msg = await channel.SendMessageAsync(content, embed: embed).ConfigureAwait(false);
-                    await msg.TryPinSilentlyAsync(this.Client, true).ConfigureAwait(false);
 
                     try
                     {
