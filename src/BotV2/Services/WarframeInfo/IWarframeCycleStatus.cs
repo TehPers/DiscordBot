@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading.Tasks;
+using DSharpPlus;
 using DSharpPlus.Entities;
 
 namespace BotV2.Services.WarframeInfo
@@ -11,6 +13,6 @@ namespace BotV2.Services.WarframeInfo
 
         DateTimeOffset Expiry { get; }
 
-        (string message, DiscordEmbed embed) GetMessage(DiscordChannel channel);
+        Task<(string message, DiscordEmbed embed)> GetMessage(DiscordClient client, DiscordChannel channel);
     }
 }

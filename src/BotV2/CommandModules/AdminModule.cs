@@ -391,7 +391,7 @@ namespace BotV2.CommandModules
 
                         foreach (var (id, role) in roles)
                         {
-                            embed.AddField(role.Name, $"{role.Mention}\nMentionable: {role.IsMentionable}", true);
+                            embed.AddField(role.Name, $"{role.Mention}\nID: {id}\nMentionable: {role.IsMentionable}", true);
                         }
 
                         await context.RespondAsync(embed: embed).ConfigureAwait(false);

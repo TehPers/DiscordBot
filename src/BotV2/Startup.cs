@@ -67,7 +67,6 @@ namespace BotV2
             services.AddLogging(builder =>
             {
                 builder.AddConsole();
-                // builder.AddDatabase();
                 builder.AddConfiguration(configuration.GetSection("Logging"));
             });
 

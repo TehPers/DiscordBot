@@ -27,7 +27,7 @@ namespace BotV2.Extensions
             {
                 TokenType = TokenType.Bot,
                 LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>(),
-                MinimumLogLevel = LogLevel.Debug,
+                MinimumLogLevel = LogLevel.Information,
                 Token = config["Token"],
                 AutoReconnect = true,
             });

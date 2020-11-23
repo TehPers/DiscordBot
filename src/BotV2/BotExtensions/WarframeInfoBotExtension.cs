@@ -47,20 +47,22 @@ namespace BotV2.BotExtensions
         private readonly WarframeInfoService _infoService;
         private readonly IWarframeClient _wfClient;
         private readonly IDataService _dataService;
+        private readonly DiscordClient _client;
         private readonly ILogger<WarframeInfoBotExtension> _logger;
         private readonly TimedMessageService _timedMessageService;
         private readonly IOptionsMonitor<WarframeInfoConfig> _config;
         private readonly IEnumerable<IWarframeCycle> _cycles;
 
-        public WarframeInfoBotExtension(WarframeInfoService infoService, IWarframeClient wfClient, IDataService dataService, ILogger<WarframeInfoBotExtension> logger, TimedMessageService timedMessageService, IOptionsMonitor<WarframeInfoConfig> config, IEnumerable<IWarframeCycle> cycles)
+        public WarframeInfoBotExtension(WarframeInfoService infoService, IWarframeClient wfClient, IDataService dataService, DiscordClient client, ILogger<WarframeInfoBotExtension> logger, TimedMessageService timedMessageService, IOptionsMonitor<WarframeInfoConfig> config, IEnumerable<IWarframeCycle> cycles)
         {
             this._infoService = infoService ?? throw new ArgumentNullException(nameof(infoService));
             this._wfClient = wfClient ?? throw new ArgumentNullException(nameof(wfClient));
             this._dataService = dataService ?? throw new ArgumentNullException(nameof(dataService));
+            this._client = client ?? throw new ArgumentNullException(nameof(client));
             this._logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this._timedMessageService = timedMessageService ?? throw new ArgumentNullException(nameof(timedMessageService));
             this._config = config ?? throw new ArgumentNullException(nameof(config));
-            this._cycles = cycles;
+            this._cycles = cycles ?? throw new ArgumentNullException(nameof(cycles));
         }
 
         protected override void Setup(DiscordClient client)
@@ -259,7 +261,7 @@ namespace BotV2.BotExtensions
                 await foreach (var subscriber in this._infoService.GetSubscribers(cycle.Id).WithCancellation(cancellation))
                 {
                     var channel = await this.Client.GetChannelAsync(subscriber).ConfigureAwait(false);
-                    var (content, embed) = status.GetMessage(channel);
+                    var (content, embed) = await status.GetMessage(this._client, channel).ConfigureAwait(false);
                     var msg = await channel.SendMessageAsync(content, embed: embed).ConfigureAwait(false);
 
                     try
@@ -291,7 +293,7 @@ namespace BotV2.BotExtensions
                     {
                         if (await messagePointer.TryGetMessage(this.Client).ConfigureAwait(false) is { } message)
                         {
-                            var (_, embed) = status.GetMessage(message.Channel);
+                            var (_, embed) = await status.GetMessage(this._client, message.Channel).ConfigureAwait(false);
                             await message.TryModifyAsync(embed: embed).ConfigureAwait(false);
                         }
                     }

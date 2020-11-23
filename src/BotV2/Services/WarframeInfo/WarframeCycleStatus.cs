@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using BotV2.Extensions;
+using DSharpPlus;
 using DSharpPlus.Entities;
 
 namespace BotV2.Services.WarframeInfo
@@ -24,10 +26,15 @@ namespace BotV2.Services.WarframeInfo
             this._infoService = infoService;
         }
 
-        public (string message, DiscordEmbed embed) GetMessage(DiscordChannel channel)
+        public async Task<(string message, DiscordEmbed embed)> GetMessage(DiscordClient client, DiscordChannel channel)
         {
             var roles = this._infoService.GetRolesForCycle(channel.Guild, this.CycleId, this.Id).Distinct();
-            var content = string.Join(" ", roles.Where(role => role.IsMentionable).Select(role => role.Mention));
+            if (!(channel.Guild is { } guild) || !(await guild.GetMemberAsync(client.CurrentUser.Id).ConfigureAwait(false) is { } member) || !member.PermissionsIn(channel).HasFlag(Permissions.MentionEveryone))
+            {
+                roles = roles.Where(role => role.IsMentionable);
+            }
+
+            var content = string.Join(" ", roles.Select(role => role.Mention));
             var embed = new DiscordEmbedBuilder()
                 .WithTitle($"{this.TitleIcon} {this.CycleName}")
                 .WithDescription($"{this.Name} time remaining: {(this.Expiry - DateTimeOffset.UtcNow).FormatWarframeTime()}")
