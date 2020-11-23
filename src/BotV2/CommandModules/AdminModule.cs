@@ -382,16 +382,20 @@ namespace BotV2.CommandModules
             {
                 try
                 {
-                    var embed = new DiscordEmbedBuilder()
-                        .WithTitle($"Roles in {context.Guild.Name}")
-                        .WithTimestamp(DateTimeOffset.Now);
-
-                    foreach (var (id, role) in context.Guild.Roles)
+                    // 25 max fields per embed
+                    foreach (var roles in context.Guild.Roles.Paged(25))
                     {
-                        embed.AddField(role.Name, $"{role.Mention}\nMentionable: {role.IsMentionable}", true);
-                    }
+                        var embed = new DiscordEmbedBuilder()
+                            .WithTitle($"Roles in {context.Guild.Name}")
+                            .WithTimestamp(DateTimeOffset.Now);
 
-                    await context.RespondAsync(embed: embed).ConfigureAwait(false);
+                        foreach (var (id, role) in roles)
+                        {
+                            embed.AddField(role.Name, $"{role.Mention}\nMentionable: {role.IsMentionable}", true);
+                        }
+
+                        await context.RespondAsync(embed: embed).ConfigureAwait(false);
+                    }
                 }
                 catch (Exception ex)
                 {
