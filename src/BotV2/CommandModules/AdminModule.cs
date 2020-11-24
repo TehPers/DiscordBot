@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Net.Mime;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BotV2.Extensions;
@@ -378,7 +376,7 @@ namespace BotV2.CommandModules
             [Command("roles")]
             [Description("Lists the roles in the guild.")]
             [RequireBotPermissions(Permissions.SendMessages | Permissions.EmbedLinks)]
-            public async Task Execute(CommandContext context)
+            public async Task Roles(CommandContext context)
             {
                 try
                 {
@@ -392,6 +390,34 @@ namespace BotV2.CommandModules
                         foreach (var (id, role) in roles)
                         {
                             embed.AddField(role.Name, $"{role.Mention}\nID: {id}\nMentionable: {role.IsMentionable}", true);
+                        }
+
+                        await context.RespondAsync(embed: embed).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await context.RespondAsync($"An error occurred:\n```\n{ex.Message}\n```").ConfigureAwait(false);
+                }
+            }
+
+            [Command("members")]
+            [Description("Lists the members of the guild.")]
+            [RequireBotPermissions(Permissions.SendMessages | Permissions.EmbedLinks)]
+            public async Task Users(CommandContext context)
+            {
+                try
+                {
+                    // 25 max fields per embed
+                    foreach (var members in context.Guild.Members.Paged(25))
+                    {
+                        var embed = new DiscordEmbedBuilder()
+                            .WithTitle($"Members of {context.Guild.Name}")
+                            .WithTimestamp(DateTimeOffset.Now);
+
+                        foreach (var (id, member) in members)
+                        {
+                            embed.AddField(member.DisplayName, $"ID: {id}", true);
                         }
 
                         await context.RespondAsync(embed: embed).ConfigureAwait(false);
