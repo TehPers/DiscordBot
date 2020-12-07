@@ -11,6 +11,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="..\..\config\bot\appsettings.Debug.json" Link="Configs\appsettings.Debug.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\config\bot\appsettings.json" Link="Configs\appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\config\bot\appsettings.Release.json" Link="Configs\appsettings.Release.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="ConfigureAwaitChecker.Analyzer" Version="4.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -31,15 +43,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Warframe.NET\src\Warframe.World\Warframe.World.csproj" />
     <ProjectReference Include="..\..\Warframe.NET\src\Warframe\Warframe.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Configs\appsettings.Debug.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Configs\appsettings.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 </Project>
