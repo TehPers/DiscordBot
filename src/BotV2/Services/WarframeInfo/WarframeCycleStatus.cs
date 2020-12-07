@@ -13,7 +13,7 @@ namespace BotV2.Services.WarframeInfo
 
         protected abstract string CycleId { get; }
         protected abstract string CycleName { get; }
-        protected abstract string TitleIcon { get; }
+        protected abstract string Icon { get; }
         protected abstract string? Thumbnail { get; }
         protected abstract DiscordColor Color { get; }
 
@@ -36,8 +36,8 @@ namespace BotV2.Services.WarframeInfo
 
             var content = string.Join(" ", roles.Select(role => role.Mention));
             var embed = new DiscordEmbedBuilder()
-                .WithTitle($"{this.TitleIcon} {this.CycleName}")
-                .WithDescription($"{this.Name} time remaining: {(this.Expiry - DateTimeOffset.UtcNow).FormatWarframeTime()}")
+                .WithTitle($"{this.CycleName}")
+                .WithDescription($"{this.Icon} `{this.Name.ToUpper()}`\nTime remaining: {(this.Expiry - DateTimeOffset.UtcNow).FormatWarframeTime()}")
                 .WithColor(this.Color)
                 .WithFooter("End time")
                 .WithTimestamp(this.Expiry);

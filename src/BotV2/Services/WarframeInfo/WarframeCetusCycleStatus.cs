@@ -13,7 +13,7 @@ namespace BotV2.Services.WarframeInfo
 
         protected override string CycleId => WarframeCetusCycle.CycleId;
         protected override string CycleName => WarframeCetusCycle.CycleName;
-        protected override string TitleIcon => (this._cycle.IsDay ? this._config.CurrentValue.CetusCycle?.DayIcon : this._config.CurrentValue.CetusCycle?.NightIcon) ?? throw new Exception($"Config is missing a value for at least one {this.CycleName} title icon");
+        protected override string Icon => (this._cycle.IsDay ? this._config.CurrentValue.CetusCycle?.DayIcon : this._config.CurrentValue.CetusCycle?.NightIcon) ?? throw new Exception($"Config is missing a value for at least one {this.CycleName} title icon");
         protected override string? Thumbnail => (this._cycle.IsDay ? this._config.CurrentValue.CetusCycle?.DayThumbnail : this._config.CurrentValue.CetusCycle?.NightThumbnail) ?? throw new Exception($"Config is missing a value for at least one {this.CycleName} thumbnail");
         protected override DiscordColor Color => new DiscordColor((this._cycle.IsDay ? this._config.CurrentValue.CetusCycle?.DayColor : this._config.CurrentValue.CetusCycle?.NightColor) ?? throw new Exception($"Config is missing a value for at least one {this.CycleName} message color"));
 

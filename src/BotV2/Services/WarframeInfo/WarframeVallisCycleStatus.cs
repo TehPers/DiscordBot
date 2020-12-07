@@ -13,7 +13,7 @@ namespace BotV2.Services.WarframeInfo
 
         protected override string CycleId => WarframeVallisCycle.CycleId;
         protected override string CycleName => WarframeVallisCycle.CycleName;
-        protected override string TitleIcon => (this._cycle.IsWarm ? this._config.CurrentValue.VallisCycle?.WarmIcon : this._config.CurrentValue.VallisCycle?.ColdIcon) ?? throw new Exception($"Config is missing a value for at least one {this.CycleName} title icon");
+        protected override string Icon => (this._cycle.IsWarm ? this._config.CurrentValue.VallisCycle?.WarmIcon : this._config.CurrentValue.VallisCycle?.ColdIcon) ?? throw new Exception($"Config is missing a value for at least one {this.CycleName} title icon");
         protected override string? Thumbnail => (this._cycle.IsWarm ? this._config.CurrentValue.VallisCycle?.WarmThumbnail : this._config.CurrentValue.VallisCycle?.ColdThumbnail) ?? throw new Exception($"Config is missing a value for at least one {this.CycleName} thumbnail");
         protected override DiscordColor Color => new DiscordColor((this._cycle.IsWarm ? this._config.CurrentValue.VallisCycle?.WarmColor : this._config.CurrentValue.VallisCycle?.ColdColor) ?? throw new Exception($"Config is missing a value for at least one {this.CycleName} message color"));
 

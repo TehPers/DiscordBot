@@ -90,7 +90,7 @@ namespace BotV2
         {
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Path.Combine(Directory.GetCurrentDirectory(), "Configs"))
-                .AddJsonFile("appsettings.json", true, false);
+                .AddJsonFile("appsettings.json", true, !Startup.Release);
 
             // Environment-specific config files
 #pragma warning disable 162

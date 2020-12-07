@@ -11,13 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\..\config\bot\appsettings.Debug.json" Link="Configs\appsettings.Debug.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\..\config\bot\appsettings.json" Link="Configs\appsettings.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\..\config\bot\appsettings.Release.json" Link="Configs\appsettings.Release.json">
+    <Content Include="..\..\config\bot\*.json">
+      <Link>Configs\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
