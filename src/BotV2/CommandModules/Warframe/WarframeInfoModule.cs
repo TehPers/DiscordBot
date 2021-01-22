@@ -13,7 +13,6 @@ using DSharpPlus.CommandsNext.Attributes;
 namespace BotV2.CommandModules.Warframe
 {
     [Group("wfinfo")]
-    [RequireOnlyOwner]
     [RequireUserPermissions(Permissions.Administrator)]
     [SuppressMessage("ReSharper", "UnusedMember.Global", Justification = "Methods are called via reflection.")]
     public sealed class WarframeInfoModule : BaseCommandModule
