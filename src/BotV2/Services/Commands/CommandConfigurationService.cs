@@ -68,13 +68,14 @@ namespace BotV2.Services.Commands
 
         public async IAsyncEnumerable<CheckBaseAttribute> GetFailedChecks(CommandContext context, bool isHelp = false)
         {
+            // TODO: RequireAndAttribute and RequireOrAttribute or another way to handle permissions
             var checks = this.GetExecutionChecks(context.Command).ToList();
             if (checks.OfType<RequireOnlyOwnerAttribute>().FirstOrDefault() is { } requireOnlyOwner && await requireOnlyOwner.ExecuteCheckAsync(context, isHelp).ConfigureAwait(false))
             {
                 yield break;
             }
 
-            foreach (var check in checks)
+            foreach (var check in checks.Where(check => !(check is RequireOnlyOwnerAttribute)))
             {
                 if (!await check.ExecuteCheckAsync(context, isHelp).ConfigureAwait(false))
                 {
