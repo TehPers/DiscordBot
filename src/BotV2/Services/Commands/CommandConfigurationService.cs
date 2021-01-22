@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BotV2.CommandChecks;
 using BotV2.Services.Data;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
@@ -67,7 +68,13 @@ namespace BotV2.Services.Commands
 
         public async IAsyncEnumerable<CheckBaseAttribute> GetFailedChecks(CommandContext context, bool isHelp = false)
         {
-            foreach (var check in this.GetExecutionChecks(context.Command))
+            var checks = this.GetExecutionChecks(context.Command).ToList();
+            if (checks.OfType<RequireOnlyOwnerAttribute>().FirstOrDefault() is { } requireOnlyOwner && await requireOnlyOwner.ExecuteCheckAsync(context, isHelp).ConfigureAwait(false))
+            {
+                yield break;
+            }
+
+            foreach (var check in checks)
             {
                 if (!await check.ExecuteCheckAsync(context, isHelp).ConfigureAwait(false))
                 {

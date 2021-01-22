@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using BotV2.BotExtensions;
+using BotV2.CommandChecks;
 using BotV2.Extensions;
 using BotV2.Services.Messages;
 using BotV2.Services.WarframeInfo;
@@ -12,7 +13,8 @@ using DSharpPlus.CommandsNext.Attributes;
 namespace BotV2.CommandModules.Warframe
 {
     [Group("wfinfo")]
-    [RequireOwner]
+    [RequireOnlyOwner]
+    [RequireUserPermissions(Permissions.Administrator)]
     [SuppressMessage("ReSharper", "UnusedMember.Global", Justification = "Methods are called via reflection.")]
     public sealed class WarframeInfoModule : BaseCommandModule
     {
