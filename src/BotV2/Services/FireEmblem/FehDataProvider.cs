@@ -61,6 +61,18 @@ namespace BotV2.Services.FireEmblem
             return this.Get(sheetName, query);
         }
 
+        public Task<IEnumerable<KeyValuePair<string, string>>> GetBuilding(string query)
+        {
+            var sheetName = this._configMonitor.CurrentValue.BuildingSheet ?? throw new InvalidOperationException("No seal sheet name is configured");
+            return this.Get(sheetName, query);
+        }
+
+        public Task<IEnumerable<KeyValuePair<string, string>>> GetVoiceActor(string query)
+        {
+            var sheetName = this._configMonitor.CurrentValue.VoiceActorSheet ?? throw new InvalidOperationException("No seal sheet name is configured");
+            return this.Get(sheetName, query);
+        }
+
         private async Task<IEnumerable<KeyValuePair<string, string>>> Get(string sheetName, string query)
         {
             // Find the key with the given name
@@ -72,6 +84,7 @@ namespace BotV2.Services.FireEmblem
 
             // If no matches, guess
             var queryWords = query.Split(' ').Where(s => s.Any(char.IsLetter)).Select(word => word.ToUpperInvariant()).ToHashSet();
+
             int GetMatchedWords(string key)
             {
                 var words = key.Split(' ').Where(s => s.Any(char.IsLetter));
@@ -80,10 +93,10 @@ namespace BotV2.Services.FireEmblem
 
             // First sort by number of matched words, then sort by distance
             var sortedEntries = from kv in sheetData
-                                let matchedWords = GetMatchedWords(kv.Key)
-                                let distance = query.LevenshteinDistance(kv.Key)
-                                orderby matchedWords descending, distance
-                                select (key: kv.Key, value: kv.Value, matchedWords, distance);
+                let matchedWords = GetMatchedWords(kv.Key)
+                let distance = query.LevenshteinDistance(kv.Key)
+                orderby matchedWords descending, distance
+                select (key: kv.Key, value: kv.Value, matchedWords, distance);
 
             return sortedEntries.FirstOrDefault().value;
         }

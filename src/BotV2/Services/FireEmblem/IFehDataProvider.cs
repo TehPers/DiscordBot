@@ -13,6 +13,10 @@ namespace BotV2.Services.FireEmblem
 
         Task<IEnumerable<KeyValuePair<string, string>>> GetSeal(string query);
 
+        Task<IEnumerable<KeyValuePair<string, string>>> GetBuilding(string query);
+
+        Task<IEnumerable<KeyValuePair<string, string>>> GetVoiceActor(string query);
+
         void Reload();
     }
 }

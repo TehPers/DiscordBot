@@ -11,5 +11,9 @@
         public string? WeaponSheet { get; set; }
 
         public string? SealSheet { get; set; }
+
+        public string? BuildingSheet { get; set; }
+
+        public string? VoiceActorSheet { get; set; }
     }
 }

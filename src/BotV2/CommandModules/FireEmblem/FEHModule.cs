@@ -38,7 +38,8 @@ namespace BotV2.CommandModules.FireEmblem
         [RequirePermissions(Permissions.SendMessages)]
         public async Task Skills(
             CommandContext context,
-            [RemainingText] [Description("Search text.")] string query
+            [RemainingText] [Description("Search text.")]
+            string query
         )
         {
             if (string.IsNullOrWhiteSpace(query))
@@ -57,7 +58,8 @@ namespace BotV2.CommandModules.FireEmblem
         [Description("Searches FEH stats.")]
         public async Task Stats(
             CommandContext context,
-            [RemainingText] [Description("Search text.")] string query
+            [RemainingText] [Description("Search text.")]
+            string query
         )
         {
             if (string.IsNullOrWhiteSpace(query))
@@ -76,7 +78,8 @@ namespace BotV2.CommandModules.FireEmblem
         [Description("Searches FEH weapons.")]
         public async Task Weapons(
             CommandContext context,
-            [RemainingText] [Description("Search text.")] string query
+            [RemainingText] [Description("Search text.")]
+            string query
         )
         {
             if (string.IsNullOrWhiteSpace(query))
@@ -95,7 +98,8 @@ namespace BotV2.CommandModules.FireEmblem
         [Description("Searches FEH seals.")]
         public async Task Seals(
             CommandContext context,
-            [RemainingText] [Description("Search text.")] string query
+            [RemainingText] [Description("Search text.")]
+            string query
         )
         {
             if (string.IsNullOrWhiteSpace(query))
@@ -106,6 +110,46 @@ namespace BotV2.CommandModules.FireEmblem
 
             await context.TriggerTypingAsync().ConfigureAwait(false);
             var results = await this._dataProvider.GetSeal(query).ConfigureAwait(false);
+            var embed = this.FormatResponse(results).Build();
+            await context.RespondAsync(embed: embed).ConfigureAwait(false);
+        }
+
+        [Command("buildings")]
+        [Description("Searches FEH buildings.")]
+        public async Task Buildings(
+            CommandContext context,
+            [RemainingText] [Description("Search text.")]
+            string query
+        )
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                await context.ShowHelp().ConfigureAwait(false);
+                return;
+            }
+
+            await context.TriggerTypingAsync().ConfigureAwait(false);
+            var results = await this._dataProvider.GetBuilding(query).ConfigureAwait(false);
+            var embed = this.FormatResponse(results).Build();
+            await context.RespondAsync(embed: embed).ConfigureAwait(false);
+        }
+
+        [Command("va")]
+        [Description("Searches FEH voice actors.")]
+        public async Task VoiceActors(
+            CommandContext context,
+            [RemainingText] [Description("Search text.")]
+            string query
+        )
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                await context.ShowHelp().ConfigureAwait(false);
+                return;
+            }
+
+            await context.TriggerTypingAsync().ConfigureAwait(false);
+            var results = await this._dataProvider.GetVoiceActor(query).ConfigureAwait(false);
             var embed = this.FormatResponse(results).Build();
             await context.RespondAsync(embed: embed).ConfigureAwait(false);
         }
